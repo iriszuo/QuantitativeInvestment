@@ -65,6 +65,8 @@ class Stock():
         df_out.loc[:,'DIF'] = dif
         df_out.loc[:,'DEA'] = dea
         df_out.loc[:,'MACD'] = half_macd * 2
+        df_out.loc[:, 'MACD_cross'] = None
+        df_out.loc[:, 'MACD_red'] = None
 
         # find golden cross and dead cross
         for i in range(33, hisdata.shape[0]-1):
@@ -77,15 +79,11 @@ class Stock():
 
             if (old_dif <= old_dea) & (new_dif >= new_dea):
                 df_out.loc[i+1, 'MACD_cross'] = 'golden'
-            elif (old_dif >= old_dea) & (new_dif <= new_dea):
+            if (old_dif >= old_dea) & (new_dif <= new_dea):
                 df_out.loc[i+1, 'MACD_cross'] = 'dead'
-            else:
-                df_out.loc[i+1, 'MACD_cross'] = None
             
             if (old_macd > 0.1) and (new_macd > 0.1) and (new_macd > old_macd):
                 df_out.loc[i+1, 'MACD_red'] = True
-            else:
-                df_out.loc[i+1, 'MACD_red'] = None
 
         
         return df_out
@@ -107,6 +105,7 @@ class Stock():
 
         # find golden cross and dead cross
         kdj_position = df_out['K'] > df_out['D'] 
+        df_out.loc[:, 'KDJ_cross'] = None
         df_out.loc[kdj_position[(kdj_position == True) & (kdj_position.shift() == False)].index, 'KDJ_cross'] = 'golden' 
         df_out.loc[kdj_position[(kdj_position == False) &
 (kdj_position.shift() == True)].index, 'KDJ_cross'] = 'dead'
@@ -146,7 +145,6 @@ class Stock():
         cci_direction = df['CCI_14'] > df.shift()['CCI_14']
         df.loc[df[(j_value==True) & (j_direction==True) & (cci_value==True) & (cci_direction==True) ].index, 'short'] = True
 
-        print(df)
         # apply trend benchmark strategy
         macd_up = (df['MACD_cross'] == 'golden') & (df['MACD'] > 0)
         macd_down = (df.shift()['MACD_cross'] == 'golden') & (df['MACD_red']==True)
@@ -182,7 +180,7 @@ class Stock():
                 begin_date = date
                 for days in range(1, holddays+1):
                     end_date = (datetime.strptime(date, "%Y-%m-%d") + timedelta(days=days)).strftime("%Y-%m-%d")
-                    gain = self.basic_period_stock_gains(code, begin_date, end_date)
+                    gain = self.basic_period_stock_gains(begin_date, end_date)
                     # skip no tradeday
                     if gain==False:
                         continue
