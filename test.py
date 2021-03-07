@@ -1,4 +1,5 @@
 import baostock as bs
+from datetime import datetime, timedelta
 import pandas as pd
 import utils as u
 from tqdm import tqdm
@@ -36,7 +37,8 @@ if __name__ == '__main__':
         df.loc[i, 'code_name'] = stock.name
 
         # begin backtest
-        buy_cnt, buy_success, avg_max_gain, avg_min_gain = stock.backtest(stock.strategy_macd_kdj_cci, 15, stock.ipodate, end_date)
+        start_date = (datetime.strptime(stock.ipodate, "%Y-%m-%d") + timedelta(365)).strftime("%Y-%m-%d") 
+        buy_cnt, buy_success, avg_max_gain, avg_min_gain = stock.backtest(stock.strategy_macd_kdj_cci, 15, start_date, end_date)
         df.loc[i, 'buy_cnt'] = buy_cnt
         df.loc[i, 'buy_success'] = buy_success
         if buy_cnt > 0:

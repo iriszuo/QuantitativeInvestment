@@ -69,7 +69,7 @@ def fetch_histkdata(stocks_dict=None, code=None):
         df_status.loc[:,'close'] = df_status.loc[:,'close'].astype(float)
 
         value['kdata'] = df_status
-
+    return in_dict
    
 
 
