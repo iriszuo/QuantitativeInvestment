@@ -1,0 +1,154 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+ALL_STOCK	baostock_structure.py	/^class ALL_STOCK(IntEnum):$/;"	c
+ALL_STOCK	get_stock_basic.py	/^from baostock_structure import ALL_STOCK, STOCK_BASIC, MY_BASIC $/;"	i
+CCI	tech_benchmark.py	/^def CCI(hisdata, df):$/;"	f
+CURRENT_TRADEDAY	get_stock_basic.py	/^CURRENT_TRADEDAY = "2021-02-22"$/;"	v
+CURRENT_TRADEDAY	index_rps.py	/^CURRENT_TRADEDAY = "2021-02-05"$/;"	v
+HISTORY_K_DATA_PLUS	baostock_structure.py	/^class HISTORY_K_DATA_PLUS(IntEnum):$/;"	c
+HISTORY_K_DATA_PLUS	utils.py	/^from baostock_structure import MY_BASIC, HISTORY_K_DATA_PLUS$/;"	i
+IntEnum	baostock_structure.py	/^from enum import IntEnum, auto$/;"	i
+IntEnum	index_rps.py	/^from enum import IntEnum, auto$/;"	i
+KDJ	tech_benchmark.py	/^def KDJ(hisdata, df):$/;"	f
+MACD	tech_benchmark.py	/^def MACD(hisdata, df):$/;"	f
+MY_BASIC	baostock_structure.py	/^class MY_BASIC(IntEnum):$/;"	c
+MY_BASIC	get_stock_basic.py	/^from baostock_structure import ALL_STOCK, STOCK_BASIC, MY_BASIC $/;"	i
+MY_BASIC	index_rps.py	/^from baostock_structure import MY_BASIC$/;"	i
+MY_BASIC	tech_benchmark.py	/^from baostock_structure import MY_BASIC$/;"	i
+MY_BASIC	utils.py	/^from baostock_structure import MY_BASIC, HISTORY_K_DATA_PLUS$/;"	i
+RSI	tech_benchmark.py	/^def RSI(code_list, startdate, enddate):$/;"	f
+STOCK_BASIC	baostock_structure.py	/^class STOCK_BASIC(IntEnum):$/;"	c
+STOCK_BASIC	get_stock_basic.py	/^from baostock_structure import ALL_STOCK, STOCK_BASIC, MY_BASIC $/;"	i
+adjustflag	baostock_structure.py	/^    adjustflag = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+amount	baostock_structure.py	/^    amount = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+auto	baostock_structure.py	/^from enum import IntEnum, auto$/;"	i
+auto	index_rps.py	/^from enum import IntEnum, auto$/;"	i
+backtest	utils.py	/^def backtest(code, startdate, enddate, holddays):$/;"	f
+baostock_structure	index_rps.py	/^import baostock_structure$/;"	i
+bs	get_stock_basic.py	/^import baostock as bs$/;"	i
+bs	index_rps.py	/^import baostock as bs$/;"	i
+bs	strategy.py	/^import baostock as bs$/;"	i
+bs	tech_benchmark.py	/^import baostock as bs$/;"	i
+bs	test.py	/^import baostock as bs$/;"	i
+bs	test_strategy.py	/^import baostock as bs$/;"	i
+bs	utils.py	/^import baostock as bs$/;"	i
+cci_direction	test_strategy.py	/^    cci_direction = df['CCI_14'] > df.shift()['CCI_14']$/;"	v
+cci_value	test_strategy.py	/^    cci_value = df['CCI_14'] < -100$/;"	v
+close	baostock_structure.py	/^    close = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+code	baostock_structure.py	/^    code = 0$/;"	v	class:ALL_STOCK
+code	baostock_structure.py	/^    code = 0$/;"	v	class:MY_BASIC
+code	baostock_structure.py	/^    code = 0$/;"	v	class:STOCK_BASIC
+code	baostock_structure.py	/^    code = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+code_name	baostock_structure.py	/^    code_name = 1$/;"	v	class:MY_BASIC
+code_name	baostock_structure.py	/^    code_name = 1$/;"	v	class:STOCK_BASIC
+code_name	baostock_structure.py	/^    code_name = 2$/;"	v	class:ALL_STOCK
+currentPrice	baostock_structure.py	/^    currentPrice = auto()$/;"	v	class:MY_BASIC
+date	baostock_structure.py	/^    date = 0$/;"	v	class:HISTORY_K_DATA_PLUS
+datetime	get_stock_basic.py	/^from datetime import datetime, timedelta$/;"	i
+datetime	index_rps.py	/^from datetime import datetime, timedelta$/;"	i
+datetime	strategy.py	/^from datetime import datetime, timedelta$/;"	i
+datetime	tech_benchmark.py	/^from datetime import datetime, timedelta$/;"	i
+datetime	test_strategy.py	/^from datetime import datetime, timedelta$/;"	i
+datetime	utils.py	/^from datetime import datetime, timedelta$/;"	i
+df	test_strategy.py	/^    df = hisdata[['date']]$/;"	v
+df	test_strategy.py	/^    df = tech.CCI(hisdata, df)$/;"	v
+df	test_strategy.py	/^    df = tech.KDJ(hisdata, df)$/;"	v
+df	test_strategy.py	/^    df = tech.MACD(hisdata, df)$/;"	v
+df	test_tushare.py	/^df = pro.stock_basic(exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,list_date')qwertyuiop$/;"	v
+enddate	test_strategy.py	/^enddate = "2021-01-01"$/;"	v
+get_his_k_data	utils.py	/^def get_his_k_data(code, startdate, enddate):$/;"	f
+get_recent_tradeday	utils.py	/^def get_recent_tradeday(date):$/;"	f
+get_stock_price	utils.py	/^def get_stock_price(stock_code, date):$/;"	f
+halfYearPrice	baostock_structure.py	/^    halfYearPrice = auto()$/;"	v	class:MY_BASIC
+halfYearRPS	baostock_structure.py	/^    halfYearRPS = auto()$/;"	v	class:MY_BASIC
+high	baostock_structure.py	/^    high = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+hisdata	test_strategy.py	/^    hisdata = u.get_his_k_data(stock, startdate, enddate)$/;"	v
+i	get_stock_basic.py	/^    i=i+1$/;"	v
+i	get_stock_basic.py	/^i=0$/;"	v
+index_list	get_stock_basic.py	/^index_list = []$/;"	v
+ipoDate	baostock_structure.py	/^    ipoDate = auto()$/;"	v	class:MY_BASIC
+ipoDate	baostock_structure.py	/^    ipoDate = auto()$/;"	v	class:STOCK_BASIC
+isST	baostock_structure.py	/^    isST = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+is_tradeday	utils.py	/^def is_tradeday(date):$/;"	f
+item_all_stock	get_stock_basic.py	/^    item_all_stock = rs_all_stock.get_row_data()  $/;"	v
+item_basic	get_stock_basic.py	/^            item_basic = item_basic[:3]$/;"	v
+item_basic	get_stock_basic.py	/^    item_basic = bs.query_stock_basic(code=stock_code).get_row_data()$/;"	v
+j_direction	test_strategy.py	/^    j_direction = df['J'] > df.shift()['J']$/;"	v
+j_value	test_strategy.py	/^    j_value = df['J'] < 0$/;"	v
+judge_kline_category	utils.py	/^def judge_kline_category(code, startdate, enddate):$/;"	f
+judge_kline_function	utils.py	/^def judge_kline_function(open_p, close_p):$/;"	f
+k_line_ma	utils.py	/^def k_line_ma(code, startdate, enddate, days):$/;"	f
+kdj_list	index_rps.py	/^kdj_list = tech.KDJ(['sh.600223'], "2020-11-01", "2021-02-05")$/;"	v
+lg	get_stock_basic.py	/^lg = bs.login()$/;"	v
+lg	index_rps.py	/^lg = bs.login()$/;"	v
+lg	test.py	/^lg = bs.login()$/;"	v
+load_stock_IPO_above	utils.py	/^def load_stock_IPO_above(stock_list, days, base):$/;"	f
+load_stock_from_csv	utils.py	/^def load_stock_from_csv():$/;"	f
+low	baostock_structure.py	/^    low = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+macd_down	test_strategy.py	/^    macd_down = (df.shift()['MACD_cross'] == 'golden') & (df['MACD_red']==True)$/;"	v
+macd_up	test_strategy.py	/^    macd_up = (df['MACD_cross'] == 'golden') & (df['MACD'] > 0)$/;"	v
+matplotlib	test_tushare.py	/^import matplotlib.pyplot as plt$/;"	i
+mpl	test_tushare.py	/^from pylab import mpl$/;"	i
+np	get_stock_basic.py	/^import numpy as np$/;"	i
+np	index_rps.py	/^import numpy as np$/;"	i
+np	tech_benchmark.py	/^import numpy as np$/;"	i
+np	test_strategy.py	/^import numpy as np$/;"	i
+np	utils.py	/^import numpy as np$/;"	i
+oneYearPrice	baostock_structure.py	/^    oneYearPrice = auto()$/;"	v	class:MY_BASIC
+oneYearRPS	baostock_structure.py	/^    oneYearRPS = auto()$/;"	v	class:MY_BASIC
+open	baostock_structure.py	/^    open = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+others_list	get_stock_basic.py	/^others_list = []$/;"	v
+outDate	baostock_structure.py	/^    outDate = auto()$/;"	v	class:STOCK_BASIC
+pctChg	baostock_structure.py	/^    pctChg = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+pd	get_stock_basic.py	/^import pandas as pd$/;"	i
+pd	index_rps.py	/^import pandas as pd$/;"	i
+pd	tech_benchmark.py	/^import pandas as pd$/;"	i
+pd	test.py	/^import pandas as pd$/;"	i
+pd	test_strategy.py	/^import pandas as pd$/;"	i
+pd	test_tushare.py	/^import pandas as pd  $/;"	i
+pd	utils.py	/^import pandas as pd$/;"	i
+period_stock_gains	utils.py	/^def period_stock_gains(stock_code, base_date, diff_days):$/;"	f
+plt	test_tushare.py	/^import matplotlib.pyplot as plt$/;"	i
+preclose	baostock_structure.py	/^    preclose = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+pro	test_tushare.py	/^pro=ts.pro_api()$/;"	v
+res	test.py	/^res = u.backtest('sh.600000', "2015-01-01", "2021-02-20", 15)$/;"	v
+rps	tech_benchmark.py	/^def rps(stock_list, base_date, diff_days):$/;"	f
+rs_all_stock	get_stock_basic.py	/^rs_all_stock = bs.query_all_stock(day=CURRENT_TRADEDAY)   #todo: automatically choose recent trade day$/;"	v
+startdate	test_strategy.py	/^startdate = "2020-01-01"$/;"	v
+status	baostock_structure.py	/^    status = auto()$/;"	v	class:STOCK_BASIC
+stock_code	get_stock_basic.py	/^    stock_code = item_all_stock[ALL_STOCK.code]$/;"	v
+stock_csv	get_stock_basic.py	/^stock_csv = pd.DataFrame(index_list, columns=[MY_BASIC.code.name, MY_BASIC.code_name.name, MY_BASIC.ipoDate.name, MY_BASIC.tradeStatus.name])$/;"	v
+stock_csv	get_stock_basic.py	/^stock_csv = pd.DataFrame(others_list, columns=[MY_BASIC.code.name, MY_BASIC.code_name.name, MY_BASIC.ipoDate.name, MY_BASIC.tradeStatus.name])$/;"	v
+stock_csv	get_stock_basic.py	/^stock_csv = pd.DataFrame(stock_list, columns=[MY_BASIC.code.name, MY_BASIC.code_name.name, MY_BASIC.ipoDate.name, MY_BASIC.tradeStatus.name])$/;"	v
+stock_list	get_stock_basic.py	/^stock_list = []$/;"	v
+stock_list	test_strategy.py	/^stock_list = u.load_stock_from_csv()$/;"	v
+strategy	strategy.py	/^def strategy(code, date):$/;"	f
+strategy	test.py	/^from strategy import strategy$/;"	i
+strategy	utils.py	/^from strategy import strategy$/;"	i
+ta	tech_benchmark.py	/^import talib as ta$/;"	i
+tech	index_rps.py	/^import tech_benchmark as tech$/;"	i
+tech	strategy.py	/^import tech_benchmark as tech$/;"	i
+tech	test_strategy.py	/^import tech_benchmark as tech$/;"	i
+timedelta	get_stock_basic.py	/^from datetime import datetime, timedelta$/;"	i
+timedelta	index_rps.py	/^from datetime import datetime, timedelta$/;"	i
+timedelta	strategy.py	/^from datetime import datetime, timedelta$/;"	i
+timedelta	tech_benchmark.py	/^from datetime import datetime, timedelta$/;"	i
+timedelta	test_strategy.py	/^from datetime import datetime, timedelta$/;"	i
+timedelta	utils.py	/^from datetime import datetime, timedelta$/;"	i
+token	test_tushare.py	/^token='89b3a4a7b139deae60a017503c40fee4bd88d8b28a5ca7b0dda1b5e8'$/;"	v
+tradeStatus	baostock_structure.py	/^    tradeStatus = 1 # 正常交易1 or 停牌0$/;"	v	class:ALL_STOCK
+tradeStatus	baostock_structure.py	/^    tradeStatus = auto()$/;"	v	class:MY_BASIC
+tradestatus	baostock_structure.py	/^    tradestatus = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+ts	test_tushare.py	/^import tushare as ts $/;"	i
+turn	baostock_structure.py	/^    turn = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
+type	baostock_structure.py	/^    type = auto()$/;"	v	class:STOCK_BASIC
+u	index_rps.py	/^import utils as u$/;"	i
+u	strategy.py	/^import utils as u$/;"	i
+u	tech_benchmark.py	/^import utils as u$/;"	i
+u	test.py	/^import utils as u$/;"	i
+u	test_strategy.py	/^import utils as u$/;"	i
+volume	baostock_structure.py	/^    volume = auto()$/;"	v	class:HISTORY_K_DATA_PLUS
