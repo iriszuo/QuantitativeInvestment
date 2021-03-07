@@ -22,7 +22,6 @@ class Stock():
             f_stocks_kline = open('stock_data_kline.pkl', 'rb')
             stock_dict = pickle.load(f_stocks_kline)[code]
             f_stocks_kline.close()
-        
         self.name = stock_dict[STOCK_DICT.code_name.name]
         self.ipodate = stock_dict[STOCK_DICT.ipoDate.name]
         self.kdata_all = stock_dict[STOCK_DICT.kdata.name]
