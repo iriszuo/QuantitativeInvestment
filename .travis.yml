@@ -3,6 +3,10 @@ python:
     - "3.6"      # current default Python on Travis CI
 install:
     - pip install -r requirements.txt
+jobs:
+        include:
+                - os: linux
+                  arch: amd64
 # command to run tests
 script:
     - python test_backtest_py.py
