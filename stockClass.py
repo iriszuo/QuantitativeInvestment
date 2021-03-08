@@ -5,6 +5,7 @@ from baostock_structure import STOCK_DICT
 import talib as ta
 from datetime import datetime, timedelta
 import utils as u
+import numpy as np
 ####################
 # this is the class for stock
 ##################
@@ -21,7 +22,6 @@ class Stock():
             f_stocks_kline = open('stock_data_kline.pkl', 'rb')
             stock_dict = pickle.load(f_stocks_kline)[code]
             f_stocks_kline.close()
-        
         self.name = stock_dict[STOCK_DICT.code_name.name]
         self.ipodate = stock_dict[STOCK_DICT.ipoDate.name]
         self.kdata_all = stock_dict[STOCK_DICT.kdata.name]
@@ -39,9 +39,8 @@ class Stock():
         hisdata = self.basic_period_hisdata(startdate, enddate)
         if hisdata.empty: # no valid tradeday during the period
             return False
-        old_price = float(hisdata.loc[0, 'close'])
-        current_price = float(hisdata.loc[-1, 'close'])
-
+        old_price = float(u.get_df_value(hisdata, 0, 'close'))
+        current_price = float(u.get_df_value(hisdata, -1, 'close'))
         gains = (current_price - old_price) / old_price
         return gains
 
@@ -151,9 +150,9 @@ class Stock():
         df.loc[df[(macd_up==True) | (macd_down==True)].index, 'trend'] = True
     
         # in 10 tradedays, sequantially occur short buy and trend buy
-        if df.iloc[-1:]['trend'].values[0] == True:
+        if u.get_df_value(df, -1, 'trend') == True:
             for i in range(10):
-                if df.shift(i).iloc[-1:]['short'].values[0] == True:
+                if u.get_df_value(df.shift(i), -1, 'short') == True:
                     return True
         return False
 

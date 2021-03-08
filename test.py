@@ -13,7 +13,7 @@ end_date = "2020-03-01"
 
 if __name__ == '__main__':
     bs.login()
-
+    pd.set_option('mode.chained_assignment', None)
     # fetch data from pickle
     start = time.time()
     f_stocks_kline = open('stock_data_kline.pkl', 'rb')

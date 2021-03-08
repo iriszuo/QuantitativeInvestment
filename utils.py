@@ -71,7 +71,8 @@ def fetch_histkdata(stocks_dict=None, code=None):
         value['kdata'] = df_status
     return in_dict
    
-
+def get_df_value(df, row_index, col_name):
+    return df.iloc[row_index, df.columns.get_loc(col_name)]
 
 def load_stock_from_csv():
     stocks = pd.read_csv('all_stock.csv')

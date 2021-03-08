@@ -4,3 +4,4 @@ tags
 *.csv
 __pycache__/*
 .DS_Store
+ta-lib/*
