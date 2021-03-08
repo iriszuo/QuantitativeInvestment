@@ -1,4 +1,5 @@
 # 股票量化投资
+[![Build Status](https://travis-ci.com/iriszuo/QuantitativeInvestment.svg?branch=master)](https://travis-ci.com/iriszuo/QuantitativeInvestment)
 ## 代码说明
 1. get_stock_basic.py 拉取当前市场的所有股票，以及他们的上市日期、自ipo至今的所有收盘价数据，存放于字典结构，存放于pickle文件。
 2. stockClass.py 股票主类，使用pickle中的data初始化。成员函数包含三类：基本类以basic开头，指标类以bench开头，策略类以strategy开头，还包括一个回测函数backtest。
