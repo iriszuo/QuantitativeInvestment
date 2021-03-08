@@ -1,12 +1,10 @@
 language: python
+before_script:
+        - pip install numpy && wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && tar -xzvf ta-lib-0.4.0-src.tar.gz && cd ta-lib && ./configure --prefix=/usr && make && sudo make install && cd .. && pip install TA-Lib
 python:
     - "3.6"      # current default Python on Travis CI
 install:
     - pip install -r requirements.txt
-jobs:
-        include:
-                - os: linux
-                  arch: amd64
 # command to run tests
 script:
     - python test_backtest_py.py
