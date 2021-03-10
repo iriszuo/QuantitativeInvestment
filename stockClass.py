@@ -1,3 +1,12 @@
+'''
+@author: iriszuo 
+@description:
+    股票主类，可表示某一只股票。类的成员函数包含三种：
+    1）以basic开头：表示基本函数，如计算股票涨跌幅等。
+    2）以bench开头：表示技术指标函数，如MACD,KDJ。
+    3）以strategy开头：表示策略函数。
+'''
+
 import pickle
 import pandas as pd
 import baostock as bs
@@ -6,11 +15,21 @@ import talib as ta
 from datetime import datetime, timedelta
 import utils as u
 import numpy as np
-####################
-# this is the class for stock
-##################
 
 class Stock():
+    ''' 构造函数：从pkl文件中读取该股票的基本数据，存储在类中。
+    input:
+        code: 股票代码，是类的主要标识。
+        dict_all:可选参数，表示全部股票数据字典。如果给出，将从该字典中查找该股票并初始化。
+        dict_self:可选参数，表示该股票的数据字典。如果给出，将直接利用该数据初始化。
+        如果以上两个参数均不给出，将从本地读取pkl文件，pkl文件的内容即为dict_all。
+    output:
+        股票类。其中以下成员函数被初始化，它们对应了字典中的key和value：
+        code: 股票代码，字符串形式
+        name：股票中文名称，字符串形式
+        ipodate：上市日期，字符串形式，形如“2020-01-01”。所有日期都是该格式。
+        kdata_all：自上市以来的所有k线数据，剔除了停牌日。dataframe二维形式。具体的列标题参见baostock_structure.py中的HISTORY_K_DATA_PLUS
+    '''
     def __init__(self, code, dict_all={}, dict_self={}):
         self.code = code
         if (dict_all):
@@ -25,7 +44,17 @@ class Stock():
         self.name = stock_dict[STOCK_DICT.code_name.name]
         self.ipodate = stock_dict[STOCK_DICT.ipoDate.name]
         self.kdata_all = stock_dict[STOCK_DICT.kdata.name]
-        
+    
+    ''' 获取某段时间的k线数据
+    input:
+        startdate:开始日期。不需要考虑是否是交易日。
+        enddate:结束日期。同上。
+    output:
+        hisdata:历史k线数据，dataframe格式。
+    exception:
+        如果startdate<enddate,将抛出异常。
+        如果该时间段内均无交易日或停牌，则hisdata为空。
+    '''
     def basic_period_hisdata(self, startdate, enddate): 
         assert datetime.strptime(startdate, "%Y-%m-%d") <= datetime.strptime(enddate, "%Y-%m-%d")
         mask = (self.kdata_all['date'] >= startdate) & (self.kdata_all['date'] <= enddate)
@@ -35,6 +64,15 @@ class Stock():
         hisdata = hisdata.reset_index(drop=True)
         return hisdata
     
+    '''计算某时间段内的股票涨跌幅。
+    input:
+        startdate:开始日期。不需要考虑是否是交易日。
+        enddate:结束日期。同上。
+    output:
+        gains:该时间段内的涨跌幅。按收盘价计。
+    exception:
+        如果时间段内无交易日，返回False 
+    '''
     def basic_period_stock_gains(self, startdate, enddate):
         hisdata = self.basic_period_hisdata(startdate, enddate)
         if hisdata.empty: # no valid tradeday during the period
@@ -128,10 +166,13 @@ class Stock():
 
 
     def strategy_macd_kdj_cci(self, date):
+        # use one year data to calculate index
         startdate = (datetime.strptime(date, "%Y-%m-%d") + timedelta(-365)).strftime("%Y-%m-%d")
         enddate = date
 
         hisdata = self.basic_period_hisdata(startdate, enddate)
+        if hisdata.empty:
+            return False 
         df = hisdata[['date']]
         df = u.join_df_column(df, self.bench_CCI(hisdata), 'date')
         df = u.join_df_column(df, self.bench_KDJ(hisdata), 'date')
@@ -160,8 +201,9 @@ class Stock():
     def backtest(self, strategy, holddays, startdate, enddate):
         startdate_t = datetime.strptime(startdate, "%Y-%m-%d")
         enddate_t = datetime.strptime(enddate, "%Y-%m-%d")
-        buy_cnt = 0
-        buy_success = 0
+        test_cnt = 0    # how many days are tested
+        buy_cnt = 0     # how many days have buy signal
+        buy_success = 0 # how many buy signal is succussful (gain>10% in holddays)
         max_gain_list=[]
         min_gain_list=[]
         avg_max_gain = None
@@ -172,6 +214,8 @@ class Stock():
             date = date.strftime("%Y-%m-%d")
             if not u.is_tradeday(date):
                 continue
+            
+            test_cnt = test_cnt + 1
             is_buy = strategy(date)
             if is_buy:
                 buy_cnt = buy_cnt + 1
