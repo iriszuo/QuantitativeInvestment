@@ -8,24 +8,22 @@ import pickle
 A_SHARE_START_DATE = "1990-12-19" # baostock库文档中给定最早可获取1990年12月19日的数据
 
 
-def fetch_all_stock_history_k_data(day=None):
+def save_all_stock_history_k_data(day=None, prefix = ""):
     """
-    fetch history k-line data from IPO data of all stocks for specific trade date
-    获取指定交易日所有股票自IPO日期以来的所有k线数据
+    save history k-line data from IPO data of all stocks for specific trade date
+    存储指定交易日所有股票自IPO日期以来的所有k线数据为csv文件
     Args:
       day:
         specified trade day 指定交易日期
+        默认为当前交易日
+      prefix:
+        保存文件时，文件名的前缀。股票信息保存时被命名为prefix + code
     Returns:
-      list // or pandas DataFrame 列表或pandas的DataFramde
-      {
-          code: string
-          tradeStatus: bool (1:normal, 0:suspended)
-          code_name: string
-          k-line-data: pandas DataFrame
-      }
+      Integer: shares number that successfully saved
     Raises:
       ConnectionError: If connect to datasource failed
     """
+    result = 0
     #### 登陆系统 ####
     lg = bs.login()
     # 显示登陆返回信息
@@ -42,29 +40,24 @@ def fetch_all_stock_history_k_data(day=None):
 
     #### 获取每个股票的历史k线数据
     while (rs.error_code == '0') & rs.next():
-        code = rs.get_row_data()[1]
-        bs.query_history_k_data_plus(code, "date,code,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,isST", start_date=A_SHARE_START_DATE, frequency="d", adjustflag="2")
+        code = rs.get_row_data()[0]
+        rs_k = bs.query_history_k_data_plus(code, "date,code,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,isST", start_date=A_SHARE_START_DATE, frequency="d", adjustflag="2")
+        print('query_history_k_data_plus respond error_code:'+rs.error_code)
+        print('query_history_k_data_plus respond  error_msg:'+rs.error_msg)
+        data_k_list = []
+        while (rs_k.error_code == '0') & rs_k.next():
+            # 获取一条记录，将记录合并在一起
+            data_k_list.append(rs_k.get_row_data())
+        try:
+            pd.DataFrame(data_k_list, columns=rs_k.fields).to_csv(prefix + str(code),encoding="utf-8",index=False)
+        except:
+            print("save share",code,"failed")
+        result+=1
+        if(result % 100 == 0):
+            print("Saved",result,"shares")
+    return result
 
-def save_all_stock_history_k_data(day=None, file_name="all_stock_history_k_data.csv"):
-    """
-    save history k-line data from IPO data of all stocks for specific trade date
-    存储指定交易日所有股票自IPO日期以来的所有k线数据为csv文件
-    Args:
-      day:
-        specified trade day 指定交易日期
-    Returns:
-      True: save succeed
-      False: save data failed
-    Raises:
-      ConnectionError: If connect to datasource failed
-    """
-    #### 登陆系统 ####
-    all_stock_history_k_data = fetch_all_stock_history_k_data(day=day)
-    try:
-        all_stock_history_k_data.to_csv(file_name)
-    except:
-        print("save data failed")
-        raise IOError("save csv failed")
-        return False
-    return True
-
+if __name__ == "__main__":
+    n = save_all_stock_history_k_data(prefix = "315-")
+    print("Download data done")
+    print("successfully saved",n, "shares")
