@@ -44,6 +44,7 @@ class Stock():
         self.name = stock_dict[STOCK_DICT.code_name.name]
         self.ipodate = stock_dict[STOCK_DICT.ipoDate.name]
         self.kdata_all = stock_dict[STOCK_DICT.kdata.name]
+
     
     ''' 获取某段时间的k线数据
     input:
@@ -63,6 +64,7 @@ class Stock():
             return hisdata
         hisdata = hisdata.reset_index(drop=True)
         return hisdata
+
     
     '''计算某时间段内的股票涨跌幅。
     input:
@@ -83,16 +85,27 @@ class Stock():
         return gains
 
 
+    '''计算所给数据的移动平均值。
+    input:
+        hisdata:历史k线数据，dataframe格式。
+        days:移动平均的窗口。一般为5天/30天/60天等。
+    output:
+        dataframe格式，行为日期，列为计算出的平均值。前几个值会为空。
+    '''
     def bench_k_line_ma(self, hisdata, days):
         df = hisdata[['date']]
         df['MA_' + str(days)] = hisdata['close'].rolling(days).mean()
         return df
 
-    ##################################################
-    # dif, dea, macd
-    # golden cross followed by macd buy is a good signal
-    # macd buy is more strong than golden cross
-    ##################################################
+    
+    '''技术指标MACD
+    input:
+        hisdata:历史k线数据，dataframe格式。
+    output:
+        dataframe格式，行为日期，列包括"DIF","DEA","MACD","MACD_cross", "MACD_red"
+        其中，MACD_cross有两种取值：'golden'表示出现金叉，'dead'表示出现死叉。
+        其中，MACD_red为true表示macd红柱放大且前后两天均超过0.1，否则为空。该指标比金叉更有力。
+    '''
     def bench_MACD(self, hisdata):
         df_out = hisdata[['date']]
         closelist = hisdata['close'] 
@@ -121,11 +134,17 @@ class Stock():
             
             if (old_macd > 0.1) and (new_macd > 0.1) and (new_macd > old_macd):
                 df_out.loc[i+1, 'MACD_red'] = True
-
         
         return df_out
 
-
+    
+    '''技术指标KDJ
+    input:
+        hisdata:历史k线数据，dataframe格式。
+    output:
+        dataframe格式，行为日期，列包括"K","D","J","KDJ_cross"。
+        其中，KJD_cross有两种取值：'golden'表示出现金叉，'dead'表示出现死叉。
+    '''
     def bench_KDJ(self, hisdata):
         df_out = hisdata[['date']]
         closelist = hisdata['close'] 
@@ -148,11 +167,16 @@ class Stock():
 (kdj_position.shift() == True)].index, 'KDJ_cross'] = 'dead'
         return df_out
 
-    ####################################################
-    # calculate multiple stocks cci for a specific period
-    # cci > 100/ cci < -100 but change direction: buy
-    # cci < -100/ cci > 100 but change direction: sell
-    ####################################################
+
+    '''技术指标CCI
+    input:
+        hisdata:历史k线数据，dataframe格式。
+    output:
+        dataframe格式，行为日期，列为"CCI_14"
+    notes:
+        CCI买入区间：1.CCI > 100,  2.CCI < -100且改变方向
+        CCI卖出区间：1.CCI < -100, 2. CCI > 100且改变方向
+    '''
     def bench_CCI(self, hisdata):
         df_out = hisdata[['date']]
         highlist = hisdata['high'] 
@@ -165,10 +189,24 @@ class Stock():
         return df_out
 
 
-    def strategy_macd_kdj_cci(self, date):
-        # use one year data to calculate index
-        startdate = (datetime.strptime(date, "%Y-%m-%d") + timedelta(-365)).strftime("%Y-%m-%d")
-        enddate = date
+    '''策略：利用趋势指标MACD和超买超卖指标KDJ和CCI
+    input:
+        startdate: 
+    output:
+    description:
+        超买超卖指标：同时满足表买入信号
+            1.KDJ:J<0且递增 
+            2.CCI:CCI<-100且递增
+        趋势指标MACD：满足一种情况表买入信号
+            1.线上金叉
+            2.线下金叉且红柱买入
+        当趋势指标成立，且在出现信号前10天内也出现了超买超卖指标，表明买入信号成立。
+    '''
+    def strategy_macd_kdj_cci(self, startdate, enddate):
+        # if for daily update, use one year data to calculate index
+        # if for backtest, use all available data
+        # startdate = (datetime.strptime(date, "%Y-%m-%d") + timedelta(-365)).strftime("%Y-%m-%d")
+        # enddate = date
 
         hisdata = self.basic_period_hisdata(startdate, enddate)
         if hisdata.empty:
@@ -198,6 +236,20 @@ class Stock():
         return False
 
 
+    '''回测函数
+    input:
+        strategy:策略函数
+        holddays:模拟持有期限
+        startdate:回测开始日期
+        enddate:回测技术日期
+    output:
+        buy_cnt:回测时段内共给出多少买入信号。
+        buy_success:所有买入信号中成功的数量。在持有期限内最大盈利超过10%表成功。
+        avg_max_gain:在持有期限内平均最大盈利。如设定持有30天，那么算出持有1天的收益率，持有2天的收益率，...，持有30天的收益率，取其中的最大值，作为当次买入的最大盈利。计算所有买入的平均值。
+        avg_min_gain:在持有期限内平均最大回撤。同上，但取每次买入收益率最小值的平均值。
+    description:
+        回测某时间段内，按某个策略买入并持有指定期限，能够成功盈利的概率。
+    '''
     def backtest(self, strategy, holddays, startdate, enddate):
         startdate_t = datetime.strptime(startdate, "%Y-%m-%d")
         enddate_t = datetime.strptime(enddate, "%Y-%m-%d")
