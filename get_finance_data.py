@@ -4,9 +4,32 @@ import numpy as np
 from datetime import datetime, timedelta
 import pickle
 import sys
+import os
 
 #A_SHARE_START_DATE = "1984-11-18" # 1984年11月18日发行了第一支A股股票“飞乐音箱”
 A_SHARE_START_DATE = "1990-12-19" # baostock库文档中给定最早可获取1990年12月19日的数据
+
+def mkdir(path):
+    '''
+    make directory at path
+    Args:
+        path
+    Returns:
+        Bool:
+            if path already exists, return False
+            if make dictory failed, return False
+            if make dictory Succeed, return True
+    '''
+    folder = os.path.exists(path)
+    if not folder:                   #判断是否存在文件夹如果不存在则创建为文件夹
+        try:
+            os.makedirs(path)            #makedirs 创建文件时如果路径不存在会创建这个路径
+            return True
+        except:
+            return False
+    else:
+        return False
+
 
 
 def save_all_stock_history_k_data(day=None, path = "", prefix = ""):
@@ -25,45 +48,72 @@ def save_all_stock_history_k_data(day=None, path = "", prefix = ""):
       Exception("login failed"): if baostock login failed
       Exception("query all stock failed"): if get all stock basic info failed
     """
-    result = 0
-    #### 登陆系统 ####
-    lg = bs.login()
-    if(lg.error_code != '0'):
-        raise Exception("login failed")
-
-    #### 获取证券信息 ####
-    if(day):
-        rs = bs.query_all_stock(day=day)
+    path2share = path + "share/"
+    path2index = path + "index/"
+    path2other = path + "other/"
+    if(mkdir(path2share) and mkdir(path2index) and mkdir(path2other)):
+        result = 0
+        #### 登陆系统 ####
+        lg = bs.login()
+        if(lg.error_code != '0'):
+            raise Exception("login failed")
+    
+        #### 获取证券信息 ####
+        if(day):
+            rs = bs.query_all_stock(day=day)
+        else:
+            rs = bs.query_all_stock()
+        if(rs.error_code != '0'):
+            raise Exception("query all stock failed")
+    
+        #### 获取每个股票的历史k线数据
+        while (rs.error_code == '0') & rs.next():
+            code = rs.get_row_data()[0]
+            rs_b = bs.query_stock_basic(code=code)
+            if(rs_b.error_code != '0'): 
+                print('query_stock_basic respond error_code:'+rs_b.error_code)
+                print('query_stock_basic respond  error_msg:'+rs_b.error_msg)
+                continue
+            stock_basic_data = rs_b.get_row_data()
+            rs_k = bs.query_history_k_data_plus(code, "date,code,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,isST", start_date=A_SHARE_START_DATE, frequency="d", adjustflag="2")
+            if(rs_k.error_code != '0'): 
+                print('query_history_k_data respond error_code:'+rs_k.error_code)
+                print('query_history_k_data respond  error_msg:'+rs_k.error_msg)
+                continue
+                # raise Exception("query history k data failed") # 不希望单个股票失败而停止整个程序
+            data_k_list = []
+            while (rs_k.error_code == '0') & rs_k.next():
+                # 获取一条记录，将记录合并在一起
+                tmp_data = rs_k.get_row_data()
+                tmp_data.insert(2,stock_basic_data[1])
+                tmp_data.insert(2,stock_basic_data[2])
+                data_k_list.append(tmp_data)
+            tmp_fields = rs_k.fields
+            tmp_fields.insert(2,"code_nam")
+            tmp_fields.insert(2,"ipodate")
+            try:
+                if(stock_basic_data[4] == '1'):
+                    pd.DataFrame(data_k_list, columns=tmp_fields).to_csv(path2share + prefix + str(code),encoding="utf-8",index=False)
+                if(stock_basic_data[4] == '2'):
+                    pd.DataFrame(data_k_list, columns=tmp_fields).to_csv(path2index + prefix + str(code),encoding="utf-8",index=False)
+                if(stock_basic_data[4] == '3'):
+                    pd.DataFrame(data_k_list, columns=tmp_fields).to_csv(path2other + prefix + str(code),encoding="utf-8",index=False)
+            except Exception as err:
+                print("save share",code,"failed")
+                print(err)
+                continue
+                #raise Exception("save share",code,"failed"") #不希望单个股票保存失败而停止整个程序
+            result+=1
+            if(result % 100 == 0):
+                print("Saved",result,"shares")
+        return result
     else:
-        rs = bs.query_all_stock()
-    if(rs.error_code != '0'):
-        raise Exception("query all stock failed")
-
-    #### 获取每个股票的历史k线数据
-    while (rs.error_code == '0') & rs.next():
-        code = rs.get_row_data()[0]
-        rs_k = bs.query_history_k_data_plus(code, "date,code,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,isST", start_date=A_SHARE_START_DATE, frequency="d", adjustflag="2")
-        if(rs_k.error_code != '0'): 
-            continue
-            # raise Exception("query history k data failed") # 不希望单个股票失败而停止整个程序
-        data_k_list = []
-        while (rs_k.error_code == '0') & rs_k.next():
-            # 获取一条记录，将记录合并在一起
-            data_k_list.append(rs_k.get_row_data())
-        try:
-            pd.DataFrame(data_k_list, columns=rs_k.fields).to_csv(path + prefix + str(code),encoding="utf-8",index=False)
-        except:
-            print("save share",code,"failed")
-            continue
-            #raise Exception("save share",code,"failed"") #不希望单个股票保存失败而停止整个程序
-        result+=1
-        if(result % 100 == 0):
-            print("Saved",result,"shares")
-    return result
+        return 0
 
 if __name__ == "__main__":
     if(len(sys.argv) != 3):
         print("Usage: python get_finance_data.py path_to_save_data prefix_of_file")
+        print("    path_to_save_data must end of '/', and no sub-dic named share, index, other in there")
     n = save_all_stock_history_k_data(path = sys.argv[1],prefix = sys.argv[2])
     print("Download data done")
     print("successfully saved",n, "shares")
