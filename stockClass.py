@@ -202,11 +202,11 @@ class Stock():
             2.线下金叉且红柱买入
         当趋势指标成立，且在出现信号前10天内也出现了超买超卖指标，表明买入信号成立。
     '''
-    def strategy_macd_kdj_cci(self, startdate, enddate):
+    def strategy_macd_kdj_cci(self, date):
         # if for daily update, use one year data to calculate index
         # if for backtest, use all available data
-        # startdate = (datetime.strptime(date, "%Y-%m-%d") + timedelta(-365)).strftime("%Y-%m-%d")
-        # enddate = date
+        startdate = (datetime.strptime(date, "%Y-%m-%d") + timedelta(-365)).strftime("%Y-%m-%d")
+        enddate = date
 
         hisdata = self.basic_period_hisdata(startdate, enddate)
         if hisdata.empty:
@@ -280,15 +280,18 @@ class Stock():
                     if gain==False:
                         continue
                     gain_list.append(gain)
-                max_gain = np.max(gain_list)
-                max_gain_list.append(max_gain)
-                min_gain = np.min(gain_list)
-                min_gain_list.append(min_gain)
-                if max_gain >= 0.1:
-                    buy_success = buy_success + 1
-        if max_gain_list:
+                if len(gain_list):
+                    max_gain= np.max(gain_list)
+                    max_gain_list.append(max_gain)
+                    min_gain = np.min(gain_list)
+                    min_gain_list.append(min_gain)
+                    if max_gain >= 0.1:
+                        buy_success = buy_success + 1
+                else: # within 30 days, no valid tradeday, may suspension for a long time
+                    continue
+        if len(max_gain_list):
             avg_max_gain = np.average(max_gain_list)
-        if min_gain_list:
+        if len(min_gain_list):
             avg_min_gain = np.average(min_gain_list)
         return buy_cnt, buy_success, avg_max_gain, avg_min_gain                
 
