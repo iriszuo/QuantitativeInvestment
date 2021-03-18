@@ -34,6 +34,43 @@ def mkdir(path):
         return False
 
 
+def get_stock_data_from_csvfile(file_path):
+    """
+    get stock data from csv file named file_path
+    Args:
+      file_path: the csv file that stored stock data wanted
+    Returns:
+      pandas DataFrame when success
+      None when failed
+    """
+    try:
+        data = pd.read_csv(file_path)
+    except:
+        return None
+    return data
+
+
+def get_stock_data_by_code_from_csvfile(code, stock_type = '1', path,prefix=""):
+    """
+    get stock data by code from csv file
+    Args:
+      code: the code of stock you want
+      stock_type: stock type, '1' for share, '2' for index, '3' for other
+      path: path to the diectory where store your stock data
+      prefix: prefix of stock name
+    Returns:
+      pandas DataFrame when success
+      None when failed
+    """
+    type_name = ""
+    if(stock_type == '1'):
+        type_name = "share/"
+    elif(stock_type == '2'):
+        type_name = "index/"
+    else:
+        type_name = "other/"
+    file_path = path + type_name + prefix + code
+    return get_stock_data_from_csvfile(file_path)
 
 def save_all_stock_history_k_data(day=None, path = "", prefix = ""):
     """
@@ -143,6 +180,9 @@ def save_all_stock_history_k_data(day=None, path = "", prefix = ""):
         if(result % 100 == 0):
             print("Saved",result,"shares")
     return result
+
+
+def 
 
 if __name__ == "__main__":
     if(len(sys.argv) != 3):
