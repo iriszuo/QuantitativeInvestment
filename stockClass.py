@@ -30,21 +30,15 @@ class Stock():
         ipodate：上市日期，字符串形式，形如“2020-01-01”。所有日期都是该格式。
         kdata_all：自上市以来的所有k线数据，剔除了停牌日。dataframe二维形式。具体的列标题参见baostock_structure.py中的HISTORY_K_DATA_PLUS
     '''
-    def __init__(self, code, dict_all={}, dict_self={}):
+    def __init__(self, code, data=pd.DataFrame(data=None)):
         self.code = code
-        if (dict_all):
-            stock_dict = dict_all[code]
-        elif (dict_self):
-            stock_dict = dict_self
-        else:
-            # fetch data from pickle
-            f_stocks_kline = open('stock_data_kline.pkl', 'rb')
-            stock_dict = pickle.load(f_stocks_kline)[code]
-            f_stocks_kline.close()
-        self.name = stock_dict[STOCK_DICT.code_name.name]
-        self.ipodate = stock_dict[STOCK_DICT.ipoDate.name]
-        self.kdata_all = stock_dict[STOCK_DICT.kdata.name]
-
+        # can accept empty data, if so, just code is initiated
+        if not data.empty:
+            self.kdata_all = data
+            # TODO: self.name = data.loc[1, STOCK_DICT.code_name.name]
+            # TODO: self.ipodate = data.loc[1, STOCK_DICT.ipoDate.name]
+            self.name = data.loc[1, 'code_nam']
+            self.ipodate = data.loc[1, 'ipodate']
     
     ''' 获取某段时间的k线数据
     input:
@@ -189,9 +183,42 @@ class Stock():
         return df_out
 
 
+    '''技术指标RPS
+    input:
+        hisdata:历史k线数据，dataframe格式。
+    output:
+        dataframe格式，行为日期，列为"RPS"
+    notes:
+    def bench_RPS(self, hisdata, stock_list, base_date, diff_days):
+        # create a dataframe according to given data period
+        df_out = hisdata[['date']]
+        
+        
+
+    gain_dict = {}
+    i=0
+    for stock in stock_list:
+        i=i+1
+        print('stock[{}]'.format(i))
+        gain_dict[stock[MY_BASIC.code]] = u.period_stock_gains(stock[MY_BASIC.code], base_date, diff_days)
+    sorted_dict = sorted(gain_dict.items(), key=lambda x: x[1], reverse=True)
+    total_num = len(gain_dict)
+    # list format: stock code, rps, gains
+    rps_list = []
+    for i, stock in enumerate(sorted_dict):
+        code = stock[0]
+        gain = stock[1]
+        rps = (1 - (i+1) / total_num) * 100
+        print('rps cal {}:{},{},{}'.format(i, code, gain, rps))
+        rps_list.append([code, rps, gain*100])
+    stock_csv = pd.DataFrame(rps_list, columns=[MY_BASIC.code.name, 'rps', 'gains']) 
+    stock_csv.to_csv("./rps_0205_120.csv", encoding="utf-8", index=False)
+    return rps_list
+    '''
+
     '''策略：利用趋势指标MACD和超买超卖指标KDJ和CCI
     input:
-        startdate: 
+        date:测试日期 
     output:
     description:
         超买超卖指标：同时满足表买入信号
@@ -294,5 +321,3 @@ class Stock():
         if len(min_gain_list):
             avg_min_gain = np.average(min_gain_list)
         return buy_cnt, buy_success, avg_max_gain, avg_min_gain                
-
-

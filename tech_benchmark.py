@@ -10,13 +10,20 @@ import talib as ta
 ######
 ##########################
 
-# calculate rps for multiple stocks based on specific period
+# calculate all stocks' period gain and sort, this is for rps calculation
+'''计算所有股票在一段时间内的涨跌幅并按从大到小排序,为计算RPS做准备。
+input:
+    stock_list: 所有股票代码的list
+    base_date:时间段的终点
+    diff_days:往前数多少天。base_date - diff_days为时间段的起点。
+output:
+    sorted_dict: 排列好的字典，key为股票代码，value为它在给定时间内的涨跌幅。 
+'''
 def rps(stock_list, base_date, diff_days):
     gain_dict = {}
     i=0
     for stock in stock_list:
         i=i+1
-        print('stock[{}]'.format(i))
         gain_dict[stock[MY_BASIC.code]] = u.period_stock_gains(stock[MY_BASIC.code], base_date, diff_days)
     sorted_dict = sorted(gain_dict.items(), key=lambda x: x[1], reverse=True)
     total_num = len(gain_dict)

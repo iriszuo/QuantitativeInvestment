@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import pickle
+from baostock_structure import STOCK_DICT
 import sys
 import os
 
@@ -50,7 +51,7 @@ def get_stock_data_from_csvfile(file_path):
     return data
 
 
-def get_stock_data_by_code_from_csvfile(code, stock_type = '1', path,prefix=""):
+def get_stock_data_by_code_from_csvfile(code, path, stock_type = '1',prefix=""):
     """
     get stock data by code from csv file
     Args:
@@ -156,8 +157,8 @@ def save_all_stock_history_k_data(day=None, path = "", prefix = ""):
             tmp_data.insert(2,stock_basic_data[2])
             data_k_list.append(tmp_data)
         tmp_fields = rs_k.fields
-        tmp_fields.insert(2,"code_nam")
-        tmp_fields.insert(2,"ipodate")
+        tmp_fields.insert(2,STOCK_DICT.code_name.name)
+        tmp_fields.insert(2,STOCK_DICT.ipoDate.name)
         try:
             if(stock_basic_data[4] == '1'):
                 pd.DataFrame(data_k_list, columns=tmp_fields)\
@@ -182,7 +183,6 @@ def save_all_stock_history_k_data(day=None, path = "", prefix = ""):
     return result
 
 
-def 
 
 if __name__ == "__main__":
     if(len(sys.argv) != 3):

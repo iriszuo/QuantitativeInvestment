@@ -1,5 +1,6 @@
 # coding=utf-8
 import os
+import sys
 import numpy as np
 import time
 import baostock as bs
@@ -10,45 +11,67 @@ from tqdm import tqdm
 from stockClass import Stock
 import pickle
 import traceback
+from get_finance_data import get_stock_data_from_csvfile
 
 #pd.set_option('display.max_rows',None)
 
 start_date = "2019-01-01"
 end_date = "2021-01-01"
 
+
+
 if __name__ == '__main__':
-    filename = "backtest.csv"
+    if (len(sys.argv) != 2):
+        print("Usage: python test.py path_to_save_data")
+
+    # set file path
+    outFilename = "result/backtest.csv"
+    errorFilename = "log/error_test_strategy.log"
+    dataPath = sys.argv[1]
 
     # file for error log
-    f=open("error.txt", "a")
+    f=open(errorFilename, "a")
     
+    # login baostock
     bs.login()
+
+    # disable some warning for pandas
     pd.set_option('mode.chained_assignment', None)
  
     # if local has result csv file, check which stocks have been tested, skip them later
-    if os.path.exists(filename):
+    exist_data_list = []
+    if os.path.exists(outFilename):
         #index_col=0的作用是避免读取最左侧显示行数的数
-        csv_data = pd.read_csv(filename, index_col=0, header=None)  
+        csv_data = pd.read_csv(outFilename, index_col=0, header=None)  
         exist_data_list = np.array(csv_data.iloc[2:,0])
-   
+    # if file not exist, create dataframe for the title
+    else:
+        df = pd.DataFrame(columns=('code','code_name', 'buy_cnt', 'buy_success','succ_ratio', 'max_gain', 'min_gain' ))
+        df.to_csv(outFilename, mode='a',encoding='utf8')
+
     # fetch data from pickle
+    '''
     start = time.time()
     f_stocks_kline = open('stock_data_kline.pkl', 'rb')
     stocks_dict = pickle.load(f_stocks_kline)
     f_stocks_kline.close()
     end = time.time()
     print("Finish data loading, {}s spent.".format(int(end-start)))
+    '''
 
-    # create dataframe to save all backtest resuls
-    df = pd.DataFrame(columns=('code','code_name', 'buy_cnt', 'buy_success','succ_ratio', 'max_gain', 'min_gain' ))
-    df.to_csv(filename, mode='a',encoding='utf8')
-
-    # traverse each stock
-    pbar = tqdm(stocks_dict.items())
+    # traverse each stock in the path
+    stockFileList = os.listdir(dataPath)
+    pbar = tqdm(stockFileList)
     i=0
-    for code,stockd in pbar:
-        pbar.set_description("Processing %s" % code)
+    for csvName in pbar:
 
+        # fetch data from csv
+        csvPath = os.path.join(dataPath, csvName)
+        stockData = get_stock_data_from_csvfile(csvPath)
+        code = stockData.loc[1, 'code']
+        
+        pbar.set_description("Processing %s" % code)
+        
         # if in exist list, skip
         if code in exist_data_list:
             print("already tested, skip.")
@@ -57,7 +80,7 @@ if __name__ == '__main__':
         df = pd.DataFrame(columns=('code','code_name', 'buy_cnt', 'buy_success','succ_ratio', 'max_gain', 'min_gain' ))
         
         # create stock class instance and get basic info
-        stock = Stock(code, dict_self=stockd)
+        stock = Stock(code, data=stockData)
         df.loc[0, 'code'] = code
         df.loc[0, 'code_name'] = stock.name
 
@@ -87,7 +110,7 @@ if __name__ == '__main__':
         print("Finish stock {}: buy_cnt={}, buy_success={}, succ_ratio={}, max_gain={}, min_gain{}".format(code, buy_cnt, buy_success, df.loc[0, 'succ_ratio'], avg_max_gain, avg_min_gain))
         i=i+1
 
-        df.to_csv(filename,header=None,  mode='a',encoding='utf8')
+        df.to_csv(outFilename,header=None,  mode='a',encoding='utf8')
     
     '''
     # calculate average results for all stocks
