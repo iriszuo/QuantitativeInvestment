@@ -20,9 +20,7 @@ class Stock():
     ''' 构造函数：从pkl文件中读取该股票的基本数据，存储在类中。
     input:
         code: 股票代码，是类的主要标识。
-        dict_all:可选参数，表示全部股票数据字典。如果给出，将从该字典中查找该股票并初始化。
-        dict_self:可选参数，表示该股票的数据字典。如果给出，将直接利用该数据初始化。
-        如果以上两个参数均不给出，将从本地读取pkl文件，pkl文件的内容即为dict_all。
+        data: 从csv中读出的该股票的k线数据，可以不给出。此时将无法使用需要用到k线数据的类。
     output:
         股票类。其中以下成员函数被初始化，它们对应了字典中的key和value：
         code: 股票代码，字符串形式
@@ -183,38 +181,53 @@ class Stock():
         return df_out
 
 
-    '''技术指标RPS
+    '''技术指标RSI
     input:
         hisdata:历史k线数据，dataframe格式。
     output:
-        dataframe格式，行为日期，列为"RPS"
+        dataframe格式，行为日期，列为"rsi_12, rsi_6, rsi_24, rsi6_signal"
     notes:
-    def bench_RPS(self, hisdata, stock_list, base_date, diff_days):
-        # create a dataframe according to given data period
-        df_out = hisdata[['date']]
-        
-        
-
-    gain_dict = {}
-    i=0
-    for stock in stock_list:
-        i=i+1
-        print('stock[{}]'.format(i))
-        gain_dict[stock[MY_BASIC.code]] = u.period_stock_gains(stock[MY_BASIC.code], base_date, diff_days)
-    sorted_dict = sorted(gain_dict.items(), key=lambda x: x[1], reverse=True)
-    total_num = len(gain_dict)
-    # list format: stock code, rps, gains
-    rps_list = []
-    for i, stock in enumerate(sorted_dict):
-        code = stock[0]
-        gain = stock[1]
-        rps = (1 - (i+1) / total_num) * 100
-        print('rps cal {}:{},{},{}'.format(i, code, gain, rps))
-        rps_list.append([code, rps, gain*100])
-    stock_csv = pd.DataFrame(rps_list, columns=[MY_BASIC.code.name, 'rps', 'gains']) 
-    stock_csv.to_csv("./rps_0205_120.csv", encoding="utf-8", index=False)
-    return rps_list
+        RSI买入区间：50-80
+        RSI卖出区间：0-20
     '''
+    def bench_RSI(self, hisdata):
+        df_out = hisdata[['date']]
+        closelist = hisdata['close']
+        
+        df_out['rsi_12'] = ta.RSI(closelist,timeperiod=12) 
+        df_out['rsi_6'] = ta.RSI(closelist,timeperiod=6)
+        df_out['rsi_24'] = ta.RSI(closelist,timeperiod=24)
+
+        rsi_buy_position = df_out['rsi_6'] > 80
+        rsi_sell_position = df_out['rsi_6'] < 20 
+    
+        # judge overbought and oversold
+        # current day is in buy status but next day is not, means current day is overbought
+        df_out.loc[rsi_buy_position[(rsi_buy_position == True) & (rsi_buy_position.shift() == False)].index, 'rsi6_signal'] = 'overbought'
+        df_out.loc[rsi_sell_position[(rsi_sell_position == True) & (rsi_sell_position.shift() == False)].index, 'rsi6_signal'] = 'oversold'
+        return df_out
+
+        
+    '''技术指标RPS
+    input:
+        sorted_dict: 按value从大到小排列的字典，包含所有股票在给定时间的涨跌幅，key为股票代码，value为涨跌幅。
+        base_date: 计算这一天的RPS。 
+        diff_days: RPS参数，如120天/240天RPS。
+    output:
+        RPS
+    exception:
+        如果在指定时间段内无交易日，报异常。
+    '''
+    def bench_RPS(self, sorted_gain_list, base_date, diff_days):
+        if sorted_gain_list.empty:
+            raise Exception("Error: no tradeday during this period!")
+        total_num = len(sorted_gain_list)
+        for i, stock in enumerate(sorted_gain_list):
+            if stock[0] == self.code:
+                gain = stock[1]
+                rps = (1 - (i+1) / total_num) * 100
+        return rps
+
 
     '''策略：利用趋势指标MACD和超买超卖指标KDJ和CCI
     input:

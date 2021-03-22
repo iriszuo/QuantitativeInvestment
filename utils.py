@@ -144,7 +144,19 @@ def k_line_ma(code, startdate, enddate, days):
     df2 = hisdata[['date','MA_'+str(days)]] 
     return df2
 
+'''计算单支股票在一段时间内的涨跌幅
+input:
+    stock_code:该股票代码
+    begin_date:起始日期
+    end_date:结束日期
+output:
+    涨跌幅。
+exception:
+    如果该时间段内无交易日，返回false
+'''
 def period_stock_gains(stock_code, begin_date, end_date):
+    stock = Stock(stock_code)
+    stock.basic_period_stock_gains(begin_date, end_date)
     assert datetime.strptime(begin_date, "%Y-%m-%d") <= datetime.strptime(end_date, "%Y-%m-%d")
     old_date = get_recent_tradeday(begin_date)
     current_date = get_recent_tradeday(end_date)
@@ -160,7 +172,14 @@ def period_stock_gains(stock_code, begin_date, end_date):
     gains = (current_price - old_price) / old_price
     return gains
 
-
+'''计算所有股票在一段时间内的涨跌幅，为计算rps做准备
+input:
+    stock_list: 所有股票代码的list
+    base_date: 计算哪天的RPS
+    diff_days: RPS区间长度，如计算60天RPS或120天RPS
+output:
+    排好序的字典(按value从大到小)，key为股票代码，value为股票的涨跌幅
+'''
 def backtest_core(code, startdate, enddate, holddays):
     startdate_t = datetime.strptime(startdate, "%Y-%m-%d")
     enddate_t = datetime.strptime(enddate, "%Y-%m-%d")

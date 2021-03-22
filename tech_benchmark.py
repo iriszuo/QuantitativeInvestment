@@ -6,53 +6,29 @@ import utils as u
 from baostock_structure import MY_BASIC
 import talib as ta
 
-####### for RPS ##########
-######
-##########################
-
-# calculate all stocks' period gain and sort, this is for rps calculation
 '''计算所有股票在一段时间内的涨跌幅并按从大到小排序,为计算RPS做准备。
 input:
     stock_list: 所有股票代码的list
     base_date:时间段的终点
     diff_days:往前数多少天。base_date - diff_days为时间段的起点。
 output:
-    sorted_dict: 排列好的字典，key为股票代码，value为它在给定时间内的涨跌幅。 
+    sorted_dict: 排序好的字典（从大到小），key为股票代码，value为它在给定时间内的涨跌幅。 
+exception:
+    若给定时间内无交易日，返回空字典。
 '''
-def rps(stock_list, base_date, diff_days):
+def gain_dict_for_rps(stock_list, base_date, diff_days):
+    begin_date = (datetime.strptime(base_date,"%Y-%m-%d") - timedelta(days=diff_days)).strftime("%Y-%m-%d")
+    end_date = base_date
     gain_dict = {}
-    i=0
     for stock in stock_list:
-        i=i+1
-        gain_dict[stock[MY_BASIC.code]] = u.period_stock_gains(stock[MY_BASIC.code], base_date, diff_days)
+        stock = Stock(stock_code)
+        gain = stock.basic_period_stock_gains(begin_date, end_date)
+        if gain == False:
+            return {}
+        gain_dict[stock] = gain
     sorted_dict = sorted(gain_dict.items(), key=lambda x: x[1], reverse=True)
-    total_num = len(gain_dict)
-    # list format: stock code, rps, gains
-    rps_list = []
-    for i, stock in enumerate(sorted_dict):
-        code = stock[0]
-        gain = stock[1]
-        rps = (1 - (i+1) / total_num) * 100
-        print('rps cal {}:{},{},{}'.format(i, code, gain, rps))
-        rps_list.append([code, rps, gain*100])
-    stock_csv = pd.DataFrame(rps_list, columns=[MY_BASIC.code.name, 'rps', 'gains']) 
-    stock_csv.to_csv("./rps_0205_120.csv", encoding="utf-8", index=False)
-    return rps_list
+    return sorted_dict
 
-####################################################
-# calculate multiple stocks cci for a specific period
-# cci > 100/ cci < -100 but change direction: buy
-# cci < -100/ cci > 100 but change direction: sell
-####################################################
-def CCI(hisdata, df):
-    df_out = df.copy()
-    highlist = hisdata['high'] 
-    lowlist = hisdata['low']
-    closelist = hisdata['close'] 
-    CCIlist = ta.CCI(highlist,lowlist,closelist) # default timeperiod=14, means use 14 days mean average
-    CCIlist = list(CCIlist)
-    df_out['CCI_14'] = CCIlist
-    return df_out
 
 ####################################################
 # calculate multiple stocks rsi for a specific period
@@ -86,60 +62,5 @@ def RSI(code_list, startdate, enddate):
         rsi_list.append(df2)
 
     return rsi_list
-
-##################################################
-# dif, dea, macd
-# golden cross followed by macd buy is a good signal
-# macd buy is more strong than golden cross
-##################################################
-def MACD(hisdata, df):
-    df_out = df.copy()
-    closelist = hisdata['close'] 
-        
-    # calculate macd index
-    dif, dea, half_macd = ta.MACD(closelist.values, fastperiod=12, slowperiod=26, signalperiod=9)
-    df_out['DIF'] = dif
-    df_out['DEA'] = dea
-    df_out['MACD'] = half_macd * 2
-
-    # find golden cross and dead cross
-    for i in range(33, hisdata.shape[0]-1):
-        old_dif = df_out.loc[i, 'DIF']
-        old_dea = df_out.loc[i, 'DEA']
-        old_macd = df_out.loc[i, 'MACD']
-        new_dif = df_out.loc[i+1, 'DIF']
-        new_dea = df_out.loc[i+1, 'DEA']
-        new_macd = df_out.loc[i+1, 'MACD']
-
-        if (old_dif <= old_dea) & (new_dif >= new_dea):
-            df_out.loc[i+1, 'MACD_cross'] = 'golden'
-        if (old_dif >= old_dea) & (new_dif <= new_dea):
-            df_out.loc[i+1, 'MACD_cross'] = 'dead'
-        if (old_macd > 0.1) and (new_macd > 0.1) and (new_macd > old_macd):
-            df_out.loc[i+1, 'MACD_red'] = True
-        
-    return df_out
-
-
-def KDJ(hisdata, df):
-    df_out = df.copy()
-    closelist = hisdata['close'] 
-    highlist = hisdata['high']
-    lowlist = hisdata['low']
-
-    # calculatei 9 day kdj index
-    low_9day = lowlist.rolling(window=9).min() 
-    high_9day = highlist.rolling(window=9).max()
-    rsv = (closelist - low_9day) / (high_9day - low_9day) * 100
-    df_out['K'] = rsv.ewm(com=2).mean()
-    df_out['D'] = df_out['K'].ewm(com=2).mean() 
-    df_out['J'] = 3 * df_out['K'] - 2 * df_out['D']
-
-    # find golden cross and dead cross
-    kdj_position = df_out['K'] > df_out['D'] 
-    df_out.loc[kdj_position[(kdj_position == True) & (kdj_position.shift() == False)].index, 'KDJ_cross'] = 'golden' 
-    df_out.loc[kdj_position[(kdj_position == False) &
-(kdj_position.shift() == True)].index, 'KDJ_cross'] = 'dead'
-    return df_out
 
 
