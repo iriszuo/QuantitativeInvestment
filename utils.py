@@ -6,80 +6,25 @@ import baostock as bs
 from strategy import strategy
 from tqdm import tqdm
 
-def fetch_all_codes_and_tradestatus(date=""):
-    codes_dict = {}
-
-    rs_all_stock = bs.query_all_stock(day=date)   #default use current day
-    while (rs_all_stock.error_code == '0') & rs_all_stock.next():
-        code_dict = {}
-        # get stock code, name, tradestatus 
-        item_all_stock = rs_all_stock.get_row_data()  
-        code_dict[ALL_STOCK.code.name] = item_all_stock[ALL_STOCK.code]
-        code_dict[ALL_STOCK.code_name.name] = item_all_stock[ALL_STOCK.code_name]
-        
-        codes_dict[item_all_stock[ALL_STOCK.code]] = code_dict
-    return codes_dict
- 
-def fetch_ipodate_and_category_type(codes_dict, mode="all"):
-    pbar = tqdm(codes_dict.items())
-    stocks_dict={}
-    indexes_dict={}
-    others_dict={}
-
-    for code, value in pbar:
-        pbar.set_description("Processing fetch ipodate and category type: %s" % code)
-        item_basic = bs.query_stock_basic(code=code).get_row_data()
-        if item_basic[STOCK_BASIC.status] == '1':  # is still in market, we ignore out of market stocks here
-            if item_basic[STOCK_BASIC.type] == '1' and (mode=="all" or mode =="stock"): # this is a stock
-                stocks_dict[code] = value
-                stocks_dict[code][STOCK_BASIC.ipoDate.name] = item_basic[STOCK_BASIC.ipoDate]
-            elif item_basic[STOCK_BASIC.type] == '2' and (mode=="all" or mode=="index"): # this is an index
-                indexes_dict[code] = value
-                indexes_dict[code][STOCK_BASIC.ipoDate.name] = item_basic[STOCK_BASIC.ipoDate]
-            elif item_basic[STOCK_BASIC.type] == '3' and (mode=="all" or mode=="other"): # this is other type
-                others_dict[code] = value
-                ohters_dict[code][STOCK_BASIC.ipoDate.name] = item_basic[STOCK_BASIC.ipoDate]
-   
-    return stocks_dict, indexes_dict, others_dict
-
-def fetch_histkdata(stocks_dict=None, code=None):
-    # support two modes of input
-    if bool(code):
-        in_dict = {}
-        in_dict[code] = None
-    else:
-        in_dict = stocks_dict
-
-    pbar = tqdm(in_dict.items())
-    for code,value in pbar:
-        pbar.set_description("Processing fetch history k data: %s" % code)
-        # calculate from ipo to today
-        startdate=value[STOCK_BASIC.ipoDate.name]
-        enddate=""  # empty means recent trade day
-        rs = bs.query_history_k_data_plus(code, "date,code,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,isST", start_date=startdate, end_date=enddate, frequency="d", adjustflag="2")
-        data_list = []
-        while (rs.error_code == '0') & rs.next():
-            data_list.append(rs.get_row_data())
-        df_init = pd.DataFrame(data_list, columns=rs.fields) 
-        df_status = df_init[df_init['tradestatus'] == '1'] # remove suspension days
-        df_status = df_status.reset_index(drop=True)
-        df_status.loc[:,'open'] = df_status.loc[:,'open'].astype(float) 
-        df_status.loc[:,'high'] = df_status.loc[:,'high'].astype(float) 
-        df_status.loc[:,'low'] = df_status.loc[:,'low'].astype(float) 
-        df_status.loc[:,'close'] = df_status.loc[:,'close'].astype(float)
-
-        value['kdata'] = df_status
-    return in_dict
-   
+'''按照行数和列名的方式获取dataframe中的某个单元格值
+input:
+    row_index: 行数，为int类型
+    col_name: 列名，为字符串类型
+output：
+    单元格值
+'''
 def get_df_value(df, row_index, col_name):
     return df.iloc[row_index, df.columns.get_loc(col_name)]
 
-def load_stock_from_csv():
-    stocks = pd.read_csv('all_stock.csv')
-    stock_code = stocks['code']
-    stock_code = stock_code.tolist()
-    return stock_code, stocks
 
+'''获取上市超过一定时间的股票列表
+input:
+    stock_list:需要过滤的股票列表。
+    days:上市超过days天的股票才会被留下。
+    base:基准时间。"%Y-%m-%d"格式。如2015-01-01。则本函数会过滤出在2015年1月1号这个时间点，上市超过days天的股票的列表。
+output:
+    过滤后的股票列表，list形式，每个元素为字符串形式的股票代码。
+'''
 def load_stock_IPO_above(stock_list, days, base):
     stock_filtered = []
     for item in stock_list:
@@ -90,13 +35,6 @@ def load_stock_IPO_above(stock_list, days, base):
         if num >= days:
             stock_filtered.append(item)
     return stock_filtered 
-
-def get_stock_price(stock_code, date):
-    df = get_his_k_data(stock_code, date, date)
-    if df.shape[0] == 0:
-        return False  # 停牌
-    price = df.loc[0,'close']
-    return price 
 
 def is_tradeday(date):
     item_if_tradeday = bs.query_trade_dates(start_date=date, end_date=date).get_row_data()

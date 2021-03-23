@@ -77,6 +77,22 @@ class Stock():
         return gains
 
 
+    '''获取某日收盘价
+    input:
+        date: 日期
+    output:
+        本股票这一天的收盘价。
+    exception:
+        如果给定的日期停牌或非交易日，则返回False
+    '''
+    def basic_stock_close_price(date):
+        hisdata = self.basic_period_hisdata(date, date)
+        if hisdata.empty:  # no valid tradeday during the period
+            return False
+        price = u.get_df_value[hisdata, 0, 'close']
+        return price
+
+
     '''计算所给数据的移动平均值。
     input:
         hisdata:历史k线数据，dataframe格式。
@@ -211,14 +227,12 @@ class Stock():
     '''技术指标RPS
     input:
         sorted_dict: 按value从大到小排列的字典，包含所有股票在给定时间的涨跌幅，key为股票代码，value为涨跌幅。
-        base_date: 计算这一天的RPS。 
-        diff_days: RPS参数，如120天/240天RPS。
     output:
         RPS
     exception:
         如果在指定时间段内无交易日，报异常。
     '''
-    def bench_RPS(self, sorted_gain_list, base_date, diff_days):
+    def bench_RPS(self, sorted_gain_list):
         if sorted_gain_list.empty:
             raise Exception("Error: no tradeday during this period!")
         total_num = len(sorted_gain_list)
