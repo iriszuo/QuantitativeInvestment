@@ -93,6 +93,24 @@ class Stock():
         return price
 
 
+    '''判断给定时间内的k线的类型：阳线或阴线
+    input:
+        hisdata:历史k线数据，dataframe格式。
+    output:
+        dataframe格式，行为日期，列为'kline_category'，如果为阴线，值为'negtive'，如果为阳线，值为'positive'。
+    '''
+    def basic_kline_category(self, hisdata):
+        def judge_kline_function(open_p, close_p):
+            if open_p > close_p: 
+                return 'negative'
+            else:
+                return 'positive'
+
+        df = hisdata[['date']]
+        df['kline_category'] = hisdata.apply(lambda x: judge_kline_function(x.open, x.close), axis=1)
+        return df
+
+
     '''计算所给数据的移动平均值。
     input:
         hisdata:历史k线数据，dataframe格式。
@@ -100,7 +118,7 @@ class Stock():
     output:
         dataframe格式，行为日期，列为计算出的平均值。前几个值会为空。
     '''
-    def bench_k_line_ma(self, hisdata, days):
+    def basic_k_line_ma(self, hisdata, days):
         df = hisdata[['date']]
         df['MA_' + str(days)] = hisdata['close'].rolling(days).mean()
         return df

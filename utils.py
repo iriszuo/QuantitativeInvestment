@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import baostock as bs
-from strategy import strategy
 from tqdm import tqdm
 
 '''按照行数和列名的方式获取dataframe中的某个单元格值
@@ -16,7 +15,18 @@ output：
 def get_df_value(df, row_index, col_name):
     return df.iloc[row_index, df.columns.get_loc(col_name)]
 
+'''将两个dataframe按行合并起来
+input:
+    dfl:左边的dataframe
+    dfr:右边的dataframe
+    index:按照某列的标题将上面两个df合并起来。
+output:
+    合并后的dataframe。比如，dfl和dfr都有'date'这一列，其他列不一样，那么将index设置为'date',就会将'date'列保留，其他列左右合并起来。
+'''
+def join_df_column(dfl, dfr, index):
+    return dfl.join(dfr.set_index(index), on=index)
 
+    
 '''获取上市超过一定时间的股票列表
 input:
     stock_list:需要过滤的股票列表。
@@ -36,11 +46,21 @@ def load_stock_IPO_above(stock_list, days, base):
             stock_filtered.append(item)
     return stock_filtered 
 
+
+'''判断给定日期是否是交易日
+input:
+    date:给定日期
+output:
+    交易日返回true，非交易日，如节假日或者周末，返回false
+'''
 def is_tradeday(date):
     item_if_tradeday = bs.query_trade_dates(start_date=date, end_date=date).get_row_data()
     if_tradeday = int(item_if_tradeday[1])
     return if_tradeday
 
+
+'''获取离给定日期最近的交易日（向前数），格式为字符串
+'''
 def get_recent_tradeday(date):
     while True:
         if_tradeday = is_tradeday(date)
@@ -49,7 +69,10 @@ def get_recent_tradeday(date):
         else:
             date = (datetime.strptime(date,"%Y-%m-%d") + timedelta(days=-1)).strftime("%Y-%m-%d")
 
-
+'''获取给定时间段的k线数据
+暂时用不到，因为类中有这个功能。
+如果以后需要在类外用，需要迁移到get_finance_data.py中
+'''
 def get_his_k_data(code, startdate, enddate):
     rs = bs.query_history_k_data(code, "date,code,open,high,low,close,tradeStatus,preclose,volume,amount,pctChg", start_date=startdate, end_date=enddate, frequency="d", adjustflag="2")
     data_list = []
@@ -64,101 +87,5 @@ def get_his_k_data(code, startdate, enddate):
     df_status.loc[:,'close'] = df_status.loc[:,'close'].astype(float)
     return df_status
 
-# judge k line is positive or negtive
-def judge_kline_function(open_p, close_p):
-    if open_p > close_p: 
-        return 'negative'
-    else:
-        return 'positive'
 
-def judge_kline_category(code, startdate, enddate):
-    df_status = get_his_k_data(code, startdate, enddate) 
-    df_status['kline_category'] = df_status.apply(lambda x: judge_kline_function(x.open, x.close), axis=1)
-    return df_status
 
-def k_line_ma(code, startdate, enddate, days):
-    hisdata = get_his_k_data(code, startdate, enddate)
-    hisdata['MA_' + str(days)] = pd.rolling_mean(hisdata['close'], days)
-    df2 = hisdata[['date','MA_'+str(days)]] 
-    return df2
-
-'''计算单支股票在一段时间内的涨跌幅
-input:
-    stock_code:该股票代码
-    begin_date:起始日期
-    end_date:结束日期
-output:
-    涨跌幅。
-exception:
-    如果该时间段内无交易日，返回false
-'''
-def period_stock_gains(stock_code, begin_date, end_date):
-    stock = Stock(stock_code)
-    stock.basic_period_stock_gains(begin_date, end_date)
-    assert datetime.strptime(begin_date, "%Y-%m-%d") <= datetime.strptime(end_date, "%Y-%m-%d")
-    old_date = get_recent_tradeday(begin_date)
-    current_date = get_recent_tradeday(end_date)
-    # if contain suspension days, return False
-    old_price = float(get_stock_price(stock_code, old_date))
-    if old_price==False:
-        return False
-
-    current_price = float(get_stock_price(stock_code, current_date))
-    if current_price==False:
-        return False
-
-    gains = (current_price - old_price) / old_price
-    return gains
-
-'''计算所有股票在一段时间内的涨跌幅，为计算rps做准备
-input:
-    stock_list: 所有股票代码的list
-    base_date: 计算哪天的RPS
-    diff_days: RPS区间长度，如计算60天RPS或120天RPS
-output:
-    排好序的字典(按value从大到小)，key为股票代码，value为股票的涨跌幅
-'''
-def backtest_core(code, startdate, enddate, holddays):
-    startdate_t = datetime.strptime(startdate, "%Y-%m-%d")
-    enddate_t = datetime.strptime(enddate, "%Y-%m-%d")
-    buy_cnt = 0
-    buy_success = 0
-    max_gain_list=[]
-    min_gain_list=[]
-    avg_max_gain = None
-    avg_min_gain = None
-
-    for date in range((enddate_t - startdate_t).days + 1):
-        date = startdate_t + timedelta(date)
-        date = date.strftime("%Y-%m-%d")
-        if not is_tradeday(date):
-            continue
-        is_buy = strategy(code, date)
-        if is_buy:
-            buy_cnt = buy_cnt + 1
-            gain_list = []
-            begin_date = date
-            for days in range(1, holddays+1):
-                end_date = (datetime.strptime(date, "%Y-%m-%d") + timedelta(days=days)).strftime("%Y-%m-%d")
-                # skip non-tradeday
-                if not is_tradeday(end_date):
-                    continue
-                gain = period_stock_gains(code, begin_date, end_date)
-                # skip suspension
-                if gain==False:
-                    continue
-                gain_list.append(gain)
-            max_gain = np.max(gain_list)
-            max_gain_list.append(max_gain)
-            min_gain = np.min(gain_list)
-            min_gain_list.append(min_gain)
-            if max_gain >= 0.1:
-                buy_success = buy_success + 1
-    if max_gain_list:
-        avg_max_gain = np.average(max_gain_list)
-    if min_gain_list:
-        avg_min_gain = np.average(min_gain_list)
-    return buy_cnt, buy_success, avg_max_gain, avg_min_gain                
-
-def join_df_column(dfl, dfr, index):
-    return dfl.join(dfr.set_index(index), on=index)
