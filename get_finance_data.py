@@ -15,7 +15,8 @@ from settings import STOCK_BASIC,\
         STOCK_OTHER_PATH,\
         STOCK_TYPE_SHARE,\
         STOCK_TYPE_INDEX,\
-        STOCK_TYPE_OTHER
+        STOCK_TYPE_OTHER,\
+        STOCK_DATA_UPDATETIME_LOG_FILE_NAME
 
 
 def get_stock_data_from_csvfile(file_path):
@@ -99,10 +100,78 @@ def get_all_stock_code(day = None):
         result.append(code)
     return result
 
+def get_stock_history_k_data(code, startDay, endDay = None):
+    """
+    获取股票代码为code的股票，从startDay到endDay的历史k线数据
+    Args:
+      code: 以字符串形式表示的股票代码
+      startDay: 以字符串形式表示的日期，比如'2008-1-1'
+      endDay: 以字符串形式表示的日期，比如'2008-1-1'。默认为当日交易日
+    Returns:
+      stock type, and a pandas DataFrame
+      其中stock type是'1'、'2'、'3'字符表示的数字，表示股票的类型是股票、指数还是其他
+      另外pandas DataFrame包含16列:
+      date,code,ipoDate,code_name,open,high,low,close,preclose,volume,amount,adjustflag,turn,tradestatus,pctChg,isST
+    Raises:
+      raise Exception("login failed")
+    """
+    lg = bs.login() # 登陆系统
+    if(lg.error_code != '0'):
+        raise Exception("login failed")
+
+    if(not endDay):
+        lt = time.localtime(time.time())
+        if(isTodayTradeEnd()):
+            endDay = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday)
+        else:
+            endDay = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday - 1)
+    rs_b = bs.query_stock_basic(code=code)
+    if(rs_b.error_code != '0'): 
+        print(code,'query_stock_basic respond error_code:'+rs_b.error_code)
+        print(code,'query_stock_basic respond  error_msg:'+rs_b.error_msg)
+    stock_basic_data = rs_b.get_row_data()
+    rs_k = bs.query_history_k_data_plus(
+            code,
+            "date,\
+            code,\
+            open,\
+            high,\
+            low,\
+            close,\
+            preclose,\
+            volume,\
+            amount,\
+            adjustflag,\
+            turn,\
+            tradestatus,\
+            pctChg,\
+            isST",
+            start_date=startDay,
+            frequency="d",
+            adjustflag="2")
+    if(rs_k.error_code != '0'): 
+        print('query_history_k_data respond error_code:'
+                + rs_k.error_code)
+        print('query_history_k_data respond  error_msg:'
+                + rs_k.error_msg)
+    data_k_list = []
+    while (rs_k.error_code == '0') & rs_k.next():
+        # 获取一条记录，将记录合并在一起
+        tmp_data = rs_k.get_row_data()
+        tmp_data.insert(2,stock_basic_data[STOCK_BASIC.code_name])
+        tmp_data.insert(2,stock_basic_data[STOCK_BASIC.ipoDate])
+        data_k_list.append(tmp_data)
+    tmp_fields = rs_k.fields
+    tmp_fields.insert(2,STOCK_BASIC.code_name.name)
+    tmp_fields.insert(2,STOCK_BASIC.ipoDate.name)
+    return stock_basic_data[STOCK_BASIC.type], pd.DataFrame(data_k_list, columns=tmp_fields)
+
+
 
 def save_all_stock_history_k_data(day=None):
     """
     save history k-line data from IPO data of all stocks for specific trade date, named by its code, end with .csv
+      TODO: 在写k线数据的同时，更新该code的最近更新时间
 
     存储指定交易日所有股票自IPO日期以来的所有k线数据为csv文件,以其股票代码为名
     Args:
@@ -131,122 +200,77 @@ def save_all_stock_history_k_data(day=None):
     lg = bs.login() # 登陆系统
     if(lg.error_code != '0'):
         raise Exception("login failed")
-
-    if(not day):
-        lt = time.localtime(time.time())
-        if(isTodayTradeEnd()):
-            day = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday)
-        else:
-            day = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday - 1)
-    #rs = bs.query_all_stock(day=day) # 获取证券信息
-    #if(rs.error_code != '0'):
-        #raise Exception("query all stock failed")
-    #while (rs.error_code == '0') & rs.next(): # 获取每个股票的历史k线数据
     all_code = get_all_stock_code(day = day)
     for code in all_code:
-        #code = rs.get_row_data()[ALL_STOCK.code]
-        rs_b = bs.query_stock_basic(code=code)
-        if(rs_b.error_code != '0'): 
-            print(code,'query_stock_basic respond error_code:'+rs_b.error_code)
-            print(code,'query_stock_basic respond  error_msg:'+rs_b.error_msg)
-            continue
-        stock_basic_data = rs_b.get_row_data()
-        if(len(stock_basic_data) < 6):
-            print(code,'query_stock_basic: no basic data')
-            continue
-
-        rs_k = bs.query_history_k_data_plus(
-                code,
-                "date,\
-                code,\
-                open,\
-                high,\
-                low,\
-                close,\
-                preclose,\
-                volume,\
-                amount,\
-                adjustflag,\
-                turn,\
-                tradestatus,\
-                pctChg,\
-                isST",
-                start_date=A_SHARE_START_DATE,
-                frequency="d",
-                adjustflag="2")
-        if(rs_k.error_code != '0'): 
-            print('query_history_k_data respond error_code:'
-                    + rs_k.error_code)
-            print('query_history_k_data respond  error_msg:'
-                    + rs_k.error_msg)
-            continue
-            # raise Exception("query history k data failed") # 不希望单个股票失败而停止整个程序
-        data_k_list = []
-        while (rs_k.error_code == '0') & rs_k.next():
-            # 获取一条记录，将记录合并在一起
-            tmp_data = rs_k.get_row_data()
-            tmp_data.insert(2,stock_basic_data[STOCK_BASIC.code_name])
-            tmp_data.insert(2,stock_basic_data[STOCK_BASIC.ipoDate])
-            data_k_list.append(tmp_data)
-        tmp_fields = rs_k.fields
-        tmp_fields.insert(2,STOCK_BASIC.code_name.name)
-        tmp_fields.insert(2,STOCK_BASIC.ipoDate.name)
+        stock_type, k_data = get_stock_history_k_data(code, startDay = A_SHARE_START_DATE, endDay = day)
         try:
-            if(stock_basic_data[STOCK_BASIC.type] == STOCK_TYPE_SHARE):
-                pd.DataFrame(data_k_list, columns=tmp_fields)\
-                        .to_csv(path2share + str(code) + ".csv",\
+            if(stock_type == STOCK_TYPE_SHARE):
+                k_data.to_csv(path2share + str(code) + ".csv",\
                         encoding="utf-8",index=False)
-            if(stock_basic_data[STOCK_BASIC.type] == STOCK_TYPE_INDEX):
-                pd.DataFrame(data_k_list, columns=tmp_fields)\
-                        .to_csv(path2index + str(code) + ".csv",\
+            elif(stock_type == STOCK_TYPE_INDEX):
+                k_data.to_csv(path2index + str(code) + ".csv",\
                         encoding="utf-8",index=False)
-            if(stock_basic_data[STOCK_BASIC.type] == STOCK_TYPE_OTHER):
-                pd.DataFrame(data_k_list, columns=tmp_fields)\
-                        .to_csv(path2other + str(code) + ".csv",\
+            elif(stock_type == STOCK_TYPE_OTHER):
+                k_data.to_csv(path2other + str(code) + ".csv",\
                         encoding="utf-8",index=False)
         except Exception as err:
             print("save share",code,"failed")
             print(err)
             continue
-            #raise Exception("save share",code,"failed"") #不希望单个股票保存失败而停止整个程序
         result+=1
         if(result % 100 == 0):
             print("Saved",result,"shares")
     return result
 
 
+def getLastFetchTime():
+    """
+    获取股票数据上次更新的时间
+    Returns:
+      Str: 上次更新时间的字符串
+    Raises:
+      FileNotFoundError: 如果文件不存在
+      PermissionError: 如果没有权限读取文件
+    """
+    with open(STOCK_DATA_UPDATETIME_LOG_FILE_NAME,'r') as f:
+        return f.readline()
 
-def updateLastFetchTime(logFile = "lastUpdateTime"):
+
+def updateLastFetchTime():
     """
     logFile record last time when update share's data
-    Args:
-      logFile: file name that record last update time
-    Returns:
-      Bool, true if update success, false otherwise
     Raises:
-      IOError: when open/write file faild
     """
     updateTime = getTime();
-    try:
-        f = open(logFile,'w') # open file logFile in replace mode
-    except:
-        raise IOError
-    try:
+    with open(STOCK_DATA_UPDATETIME_LOG_FILE_NAME,'w') as f:
         f.write(updateTime)
-    except:
-        raise IOError
-    f.close()
-    return True
 
-
-def append_all_stock_data(path, day = None):
+def update_all_stock_data(day = None):
     """
-    update
+    更新股票数据至交易日day
     Args:
+      day: 交易日
+          如果当日股票交易结束，默认为当日，否则为前一日
     Returns:
     Raises:
     """
-    pass
+    if(not day):
+        lt = time.localtime(time.time())
+        if(isTodayTradeEnd()):
+            day = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday)
+        else:
+            day = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday - 1)
+    lastUpdateTime = getLastFetchTime()
+    if(day == lastUpdateTime):
+        return
+    else:
+        # 获取所有code
+        # 判断code对应数据是否已经有文件
+        # 如果已经有文件，读取文件数据上次更新时间
+        # **数据更新时间开始的时候设想所有code共用一个时间，但是现在看来需要每个code 对应一个**
+        # 如果还没有文件，从该股票ipo日期开始下载文件
+        pass
+
     # to_csv("file.csv",mode='a', header = False)
 
 if __name__ == "__main__":
