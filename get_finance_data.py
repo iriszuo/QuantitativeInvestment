@@ -2,17 +2,18 @@ import baostock as bs
 import pandas as pd
 import sys
 import time
+import csv
+import os
 from utils2 import mkdir,\
-        getTime,\
-        isTodayTradeEnd
+        getRecentTradeday
 
 from settings import STOCK_BASIC,\
         ALL_STOCK,\
         A_SHARE_START_DATE,\
-        STOCK_ROOT_PATH,\
-        STOCK_SHARE_PATH,\
-        STOCK_INDEX_PATH,\
-        STOCK_OTHER_PATH,\
+        STOCK_DATA_ROOT_PATH,\
+        STOCK_DATA_SHARE_PATH,\
+        STOCK_DATA_INDEX_PATH,\
+        STOCK_DATA_OTHER_PATH,\
         STOCK_TYPE_SHARE,\
         STOCK_TYPE_INDEX,\
         STOCK_TYPE_OTHER,\
@@ -55,9 +56,11 @@ def get_stock_data_by_code_from_csvfile(code, stock_type=None):
         if(rs_b.error_code != '0'): 
             raise Exception("baostock get stock basic information faild")
         stock_basic_data = rs_b.get_row_data()
-        if(len(stock_basic_data) < 6):
-            raise Exception("no basic information")
-        stock_type = stock_basic_data[STOCK_BASIC.type]
+        #bs.logout()
+        try:
+            stock_type = stock_basic_data[STOCK_BASIC.type]
+        except Exception as e:
+            raise e
     file_path = ""
     if(stock_type == STOCK_TYPE_SHARE):
         file_path += STOCK_SHARE_PATH
@@ -67,8 +70,31 @@ def get_stock_data_by_code_from_csvfile(code, stock_type=None):
         file_path += STOCK_OTHER_PATH
     else:
         raise Exception("Unknown stock type")
-    file_path += code + ".csv"
+    file_path += "/" + code + ".csv"
     return get_stock_data_from_csvfile(file_path)
+
+def get_stock_type(code):
+    """
+    获取code对应证券的类型
+    '1'表示股票
+    '2'表示指数
+    '3'表示其他
+    """
+    lg = bs.login() # 登陆系统
+    if(lg.error_code != '0'):
+        raise Exception("login failed")
+    rs_b = bs.query_stock_basic(code=code)
+    if(rs_b.error_code != '0'): 
+        print(code,'query_stock_basic respond error_code:'+rs_b.error_code)
+        print(code,'query_stock_basic respond  error_msg:'+rs_b.error_msg)
+    stock_basic_data = rs_b.get_row_data()
+    #bs.logout()
+    try:
+        result = stock_basic_data[STOCK_BASIC.type]
+    except Exception as e:
+        raise e
+    else:
+        return result
 
 def get_all_stock_code(day = None):
     """
@@ -87,17 +113,14 @@ def get_all_stock_code(day = None):
     if(lg.error_code != '0'):
         raise Exception("login failed")
     if(not day):
-        lt = time.localtime(time.time())
-        if(isTodayTradeEnd()):
-            day = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday)
-        else:
-            day = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday - 1)
+        day = getRecentTradeday()
     rs = bs.query_all_stock(day=day) # 获取证券信息
     if(rs.error_code != '0'):
         raise Exception("query all stock failed")
     while (rs.error_code == '0') & rs.next(): # 获取每个股票的历史k线数据
         code = rs.get_row_data()[ALL_STOCK.code]
         result.append(code)
+    #bs.logout()
     return result
 
 def get_stock_history_k_data(code, startDay, endDay = None):
@@ -120,11 +143,7 @@ def get_stock_history_k_data(code, startDay, endDay = None):
         raise Exception("login failed")
 
     if(not endDay):
-        lt = time.localtime(time.time())
-        if(isTodayTradeEnd()):
-            endDay = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday)
-        else:
-            endDay = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday - 1)
+        endDay = getRecentTradeday()
     rs_b = bs.query_stock_basic(code=code)
     if(rs_b.error_code != '0'): 
         print(code,'query_stock_basic respond error_code:'+rs_b.error_code)
@@ -164,116 +183,132 @@ def get_stock_history_k_data(code, startDay, endDay = None):
     tmp_fields = rs_k.fields
     tmp_fields.insert(2,STOCK_BASIC.code_name.name)
     tmp_fields.insert(2,STOCK_BASIC.ipoDate.name)
+    #bs.logout()
     return stock_basic_data[STOCK_BASIC.type], pd.DataFrame(data_k_list, columns=tmp_fields)
 
 
-
-def save_all_stock_history_k_data(day=None):
+def getLastFetchTime(code):
     """
-    save history k-line data from IPO data of all stocks for specific trade date, named by its code, end with .csv
-      TODO: 在写k线数据的同时，更新该code的最近更新时间
-
-    存储指定交易日所有股票自IPO日期以来的所有k线数据为csv文件,以其股票代码为名
+    获取股票代码为code的股票的上次更新时间
     Args:
-      day:
-        specified trade day 指定交易日期
-        今日交易日结束半小时以上，默认为当前交易日，否则默认为上个交易日
     Returns:
-      Integer: shares number that successfully saved
-    Raises:
-      Exception("Make directories path to share/index/other failed"): if make directories failed
-      Exception("login failed"): if baostock login failed
-      Exception("query all stock failed"): if get all stock basic info failed
+      表示上次更新时间的字符串
+      如果没有找到，返回None
     """
-    path2root = STOCK_ROOT_PATH
-    path2share = STOCK_SHARE_PATH
-    path2index = STOCK_INDEX_PATH
-    path2other = STOCK_OTHER_PATH
-
-    try:
-        mk_rs = mkdir(path2root) and mkdir(path2share) and mkdir(path2index) and mkdir(path2other)
-    except Exception as err:
-        print(err)
-        raise Exception("Make directories path to share/index/other failed")
-
-    result = 0
-    lg = bs.login() # 登陆系统
-    if(lg.error_code != '0'):
-        raise Exception("login failed")
-    all_code = get_all_stock_code(day = day)
-    for code in all_code:
-        stock_type, k_data = get_stock_history_k_data(code, startDay = A_SHARE_START_DATE, endDay = day)
-        try:
-            if(stock_type == STOCK_TYPE_SHARE):
-                k_data.to_csv(path2share + str(code) + ".csv",\
-                        encoding="utf-8",index=False)
-            elif(stock_type == STOCK_TYPE_INDEX):
-                k_data.to_csv(path2index + str(code) + ".csv",\
-                        encoding="utf-8",index=False)
-            elif(stock_type == STOCK_TYPE_OTHER):
-                k_data.to_csv(path2other + str(code) + ".csv",\
-                        encoding="utf-8",index=False)
-        except Exception as err:
-            print("save share",code,"failed")
-            print(err)
-            continue
-        result+=1
-        if(result % 100 == 0):
-            print("Saved",result,"shares")
-    return result
-
-
-def getLastFetchTime():
-    """
-    获取股票数据上次更新的时间
-    Returns:
-      Str: 上次更新时间的字符串
-    Raises:
-      FileNotFoundError: 如果文件不存在
-      PermissionError: 如果没有权限读取文件
-    """
+    if(not os.path.exists(STOCK_DATA_UPDATETIME_LOG_FILE_NAME)):
+        return None
     with open(STOCK_DATA_UPDATETIME_LOG_FILE_NAME,'r') as f:
-        return f.readline()
+        for line in csv.DictReader(f):
+            try:
+                if(line['code'] == code):
+                    return line['lastUpdateDate']
+            except Exception as e:
+                raise e
+    return None
 
 
-def updateLastFetchTime():
+def updateLastFetchTime(code,updateTime):
     """
-    logFile record last time when update share's data
-    Raises:
+    更新股票代码为code的股票的上次获取时间，设置为updateTime
+    Args:
+    Returns:
+      True
+      False
     """
-    updateTime = getTime();
-    with open(STOCK_DATA_UPDATETIME_LOG_FILE_NAME,'w') as f:
-        f.write(updateTime)
+    # 在log文件中找到code对应的行（找不到说明还没有）
+    # 是否要考虑找不到log文件的情况？
+    if(not os.path.exists(STOCK_DATA_ROOT_PATH)):
+        # 如果存储股票数据的根目录还没有，说明还没有数据，返回失败
+        #os.makedirs(STOCK_DATA_ROOT_PATH)
+        return False
+    if(not os.path.exists(STOCK_DATA_UPDATETIME_LOG_FILE_NAME)):
+        with open(STOCK_DATA_UPDATETIME_LOG_FILE_NAME,"w+") as f:
+            writer = csv.writer(f)
+            writer.writerow(['code','lastUpdateDate'])
 
-def update_all_stock_data(day = None):
+    with open(STOCK_DATA_UPDATETIME_LOG_FILE_NAME) as inf,\
+            open(STOCK_DATA_UPDATETIME_LOG_FILE_NAME + '.tmp', 'w') as outf:
+                find = False
+                reader = csv.reader(inf)
+                writer = csv.writer(outf)
+                for line in reader:
+                    if(line[0] == code):
+                        writer.writerow([line[0],updateTime])
+                        find = True
+                        break
+                    else:
+                        writer.writerow(line)
+                if(not find):
+                    # 没有找到对应code，新写入一行
+                    writer.writerow([code,updateTime])
+                writer.writerows(reader)
+    os.remove(STOCK_DATA_UPDATETIME_LOG_FILE_NAME)
+    os.rename(STOCK_DATA_UPDATETIME_LOG_FILE_NAME + '.tmp',\
+            STOCK_DATA_UPDATETIME_LOG_FILE_NAME)
+
+
+def updateAllStockData(day = None):
     """
-    更新股票数据至交易日day
+    更新股票数据至交易日day，如果还没有下载过数据，会从零开始下载，并将数据按照正确类别分别存储在STOCK_DATA_SHARE_PATH、STOCK_DATA_INDEX_PATH、STOCK_DATA_OTHER_PATH中，同时记录更新每个code对应的更新时间，存储在STOCK_DATA_UPDATETIME_LOG_FILE_NAME中
     Args:
       day: 交易日
-          如果当日股票交易结束，默认为当日，否则为前一日
+          如果当日股票交易结束，默认为当日
+          否则向前找到最近的交易日
     Returns:
+      int:成功更新数据的股票数
     Raises:
     """
+    result = 0
     if(not day):
-        lt = time.localtime(time.time())
-        if(isTodayTradeEnd()):
-            day = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday)
-        else:
-            day = str(lt.tm_year) + "-" + str(lt.tm_mon) + "-" + str(lt.tm_mday - 1)
-    lastUpdateTime = getLastFetchTime()
-    if(day == lastUpdateTime):
-        return
+        day = getRecentTradeday()
+    try:
+        all_codes = get_all_stock_code(day = day)
+    except Exception as e:
+        raise e
     else:
-        # 获取所有code
-        # 判断code对应数据是否已经有文件
-        # 如果已经有文件，读取文件数据上次更新时间
-        # **数据更新时间开始的时候设想所有code共用一个时间，但是现在看来需要每个code 对应一个**
-        # 如果还没有文件，从该股票ipo日期开始下载文件
-        pass
-
-    # to_csv("file.csv",mode='a', header = False)
-
-if __name__ == "__main__":
-    n = save_all_stock_history_k_data()
-    print("Download data done")
-    print("successfully saved",n, "shares")
+        to_csv_header = False
+        path2root = STOCK_DATA_ROOT_PATH
+        path2share = STOCK_DATA_SHARE_PATH
+        path2index = STOCK_DATA_INDEX_PATH
+        path2other = STOCK_DATA_OTHER_PATH
+        try:
+            mkdir(path2root) and mkdir(path2share) and mkdir(path2index) and mkdir(path2other)
+        except Exception as err:
+            raise err
+        for code in all_codes:
+            lastUpdateTime = getLastFetchTime(code)
+            if(lastUpdateTime):
+                # code 对应股票存在对应更新时间
+                if(day == lastUpdateTime):
+                    continue
+            else:
+                # code 对应股票不存在对应的最近更新时间，
+                # 有理由相信该股票数据还未被下载
+                # 从ipo之日开始下载该股票数据
+                lastUpdateTime = A_SHARE_START_DATE
+                # 创建csv文件时需要添加header
+                to_csv_header = True
+            # Q：要不要考虑更新时间大于当前时间的异常情况？
+            try:
+                stock_type, stock_kline_data = get_stock_history_k_data(code, startDay = lastUpdateTime,endDay = day)
+            except Exception as e:
+                raise e
+            stock_data_filename = ""
+            if(stock_type == STOCK_TYPE_SHARE):
+                stock_data_filename += path2share
+            elif(stock_type == STOCK_TYPE_INDEX):
+                stock_data_filename += path2index
+            elif(stock_type == STOCK_TYPE_OTHER):
+                stock_data_filename += path2other
+            stock_data_filename +=  "/" + code + ".csv"
+            stock_kline_data.to_csv(stock_data_filename,\
+                    mode = 'a',\
+                    encoding="utf-8",\
+                    index=False,\
+                    header= to_csv_header)
+            # 更新last update time
+            updateLastFetchTime(code,day)
+            result+=1
+            if(result % 100 == 0):
+                print("Saved",result,"shares")
+    return result
