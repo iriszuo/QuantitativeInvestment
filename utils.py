@@ -47,27 +47,40 @@ def load_stock_IPO_above(stock_list, days, base):
     return stock_filtered 
 
 
-'''判断给定日期是否是交易日
-input:
-    date:给定日期
-output:
-    交易日返回true，非交易日，如节假日或者周末，返回false
-'''
-def is_tradeday(date):
-    item_if_tradeday = bs.query_trade_dates(start_date=date, end_date=date).get_row_data()
-    if_tradeday = int(item_if_tradeday[1])
-    return if_tradeday
+def isTradeDay(day):
+    """
+    判断day是否为交易日,day的格式为:"2021-3-23"
+    是，返回1
+    不是，返回0
+    day的格式错误返回-1
+    """
+    lg = bs.login() # 登陆系统
+    if(lg.error_code != '0'):
+        raise Exception("login failed")
+    trade_dates = bs.query_trade_dates(start_date=day, end_date=day).get_row_data()
+    #bs.logout()
+    if(len(trade_dates) == 0):
+        return -1
+    else:
+        return int(trade_dates[1])
 
 
-'''获取离给定日期最近的交易日（向前数），格式为字符串
-'''
-def get_recent_tradeday(date):
+def getRecentTradeday(day=None):
+    """
+    获取day之前最接近day的交易日
+    获取当前日期之前，最近的交易日期
+    """
+    if(not day):
+        # 这种情况下，如果当天的交易还未结束，返回的交易日是不可用的
+        day = getDate()
+        if(not isKdataUpdated()):
+            day = (datetime.strptime(day,"%Y-%m-%d") + timedelta(days=-1)).strftime("%Y-%m-%d")
     while True:
-        if_tradeday = is_tradeday(date)
-        if if_tradeday:
-            return date
+        if(isTradeDay(day)):
+            return day
         else:
-            date = (datetime.strptime(date,"%Y-%m-%d") + timedelta(days=-1)).strftime("%Y-%m-%d")
+            day = (datetime.strptime(day,"%Y-%m-%d") + timedelta(days=-1)).strftime("%Y-%m-%d")
+
 
 '''获取给定时间段的k线数据
 暂时用不到，因为类中有这个功能。

@@ -336,8 +336,10 @@ class Stock():
         for date in range((enddate_t - startdate_t).days + 1):
             date = startdate_t + timedelta(date)
             date = date.strftime("%Y-%m-%d")
-            if not u.is_tradeday(date):
+            if u.isTradeDay(date) == 0:
                 continue
+            if u.isTradeDay(date) == -1:
+                raise Exception("input date format error for isTradeDay")
             
             test_cnt = test_cnt + 1
             is_buy = strategy(date)
