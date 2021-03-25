@@ -20,7 +20,7 @@ from settings import STOCK_BASIC,\
         STOCK_DATA_UPDATETIME_LOG_FILE_NAME
 
 
-def get_stock_data_from_csvfile(file_path):
+def getStockDataFromCsvfile(file_path):
     """
     get stock data from csv file named file_path
     Args:
@@ -36,7 +36,7 @@ def get_stock_data_from_csvfile(file_path):
     return data
 
 
-def get_stock_data_by_code_from_csvfile(code, stock_type=None):
+def getStockDataByCodeFromCsvfile(code, stock_type=None):
     """
     get stock data by code from csv file
     Args:
@@ -71,9 +71,9 @@ def get_stock_data_by_code_from_csvfile(code, stock_type=None):
     else:
         raise Exception("Unknown stock type")
     file_path += "/" + code + ".csv"
-    return get_stock_data_from_csvfile(file_path)
+    return getStockDataFromCsvfile(file_path)
 
-def get_stock_type(code):
+def getStockType(code):
     """
     获取code对应证券的类型
     '1'表示股票
@@ -96,7 +96,7 @@ def get_stock_type(code):
     else:
         return result
 
-def get_all_stock_code(day = None):
+def getAllStockCode(day = None):
     """
     获取交易日为day时，股市上所有股票的代码，包括股票、指数和其他
     Args:
@@ -123,7 +123,7 @@ def get_all_stock_code(day = None):
     #bs.logout()
     return result
 
-def get_stock_history_k_data(code, startDay, endDay = None):
+def getStockHistoryKData(code, startDay, endDay = None):
     """
     获取股票代码为code的股票，从startDay到endDay的历史k线数据
     Args:
@@ -262,7 +262,7 @@ def updateAllStockData(day = None):
     if(not day):
         day = getRecentTradeday()
     try:
-        all_codes = get_all_stock_code(day = day)
+        all_codes = getAllStockCode(day = day)
     except Exception as e:
         raise e
     else:
@@ -290,7 +290,7 @@ def updateAllStockData(day = None):
                 to_csv_header = True
             # Q：要不要考虑更新时间大于当前时间的异常情况？
             try:
-                stock_type, stock_kline_data = get_stock_history_k_data(code, startDay = lastUpdateTime,endDay = day)
+                stock_type, stock_kline_data = getStockHistoryKData(code, startDay = lastUpdateTime,endDay = day)
             except Exception as e:
                 raise e
             stock_data_filename = ""
