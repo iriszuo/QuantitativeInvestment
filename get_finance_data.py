@@ -4,8 +4,8 @@ import sys
 import time
 import csv
 import os
-from utils2 import mkdir,\
-        getRecentTradeday
+from utils2 import mkdir
+from utils import getRecentTradeday
 
 from settings import STOCK_BASIC,\
         ALL_STOCK,\
