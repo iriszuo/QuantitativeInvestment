@@ -149,6 +149,9 @@ def getStockHistoryKData(code, startDay, endDay = None):
         print(code,'query_stock_basic respond error_code:'+rs_b.error_code)
         print(code,'query_stock_basic respond  error_msg:'+rs_b.error_msg)
     stock_basic_data = rs_b.get_row_data()
+    if(len(stock_basic_data) < 6):
+        # query stock basic data failed
+        raise Exception("Get stock basic data failed")
     rs_k = bs.query_history_k_data_plus(
             code,
             "date,\
@@ -292,7 +295,8 @@ def updateAllStockData(day = None):
             try:
                 stock_type, stock_kline_data = getStockHistoryKData(code, startDay = lastUpdateTime,endDay = day)
             except Exception as e:
-                raise e
+                print("save stock",code,"failed")
+                continue
             stock_data_filename = ""
             if(stock_type == STOCK_TYPE_SHARE):
                 stock_data_filename += path2share
@@ -308,7 +312,7 @@ def updateAllStockData(day = None):
                     header= to_csv_header)
             # 更新last update time
             updateLastFetchTime(code,day)
-            result+=1
+            result += 1
             if(result % 100 == 0):
                 print("Saved",result,"shares")
     return result
