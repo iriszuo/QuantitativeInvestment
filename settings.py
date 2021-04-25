@@ -10,7 +10,12 @@ import sys
 A_SHARE_START_DATE = "1990-12-19" # baostock库文档中给定最早可获取1990年12月19
                                  # 日的数据
 
-REPO_HOME_PATH = sys.path[0] # 获取settings所在路径
+REPO_HOME_PATH = sys.path[0] # 获取当前运行脚本所在路径
+
+LOG_PATH = REPO_HOME_PATH + "/log"
+RESULT_PATH = REPO_HOME_PATH + "/result"
+BACKTEST_RESULT_PATH = RESULT_PATH + "/backtest"
+
 STOCK_DATA_ROOT_PATH = REPO_HOME_PATH + "/share_data" 
 # 用于存储STOCK数据的根目录
 STOCK_DATA_SHARE_PATH = STOCK_DATA_ROOT_PATH + "/share"

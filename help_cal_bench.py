@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import utils as u
 from baostock_structure import MY_BASIC
 import talib as ta
+from stockClass import Stock
+from get_finance_data import getStockDataByCodeFromCsvfile, getStockPeriodGain
 
 '''计算所有股票在一段时间内的涨跌幅并按从大到小排序,为计算RPS做准备。
 input:
@@ -20,12 +22,12 @@ def gain_dict_for_rps(stock_list, base_date, diff_days):
     begin_date = (datetime.strptime(base_date,"%Y-%m-%d") - timedelta(days=diff_days)).strftime("%Y-%m-%d")
     end_date = base_date
     gain_dict = {}
-    for stock in stock_list:
-        stock = Stock(stock_code)
-        gain = stock.basic_period_stock_gains(begin_date, end_date)
+    for stock_code in stock_list:
+        gain = getStockPeriodGain(stock_code, begin_date, end_date)
         if gain == False:
-            return {}
-        gain_dict[stock] = gain
+            # for this stock, no tradeday during given period, gain=0
+            gain_dict[stock_code] = 0
+        gain_dict[stock_code] = gain
     sorted_dict = sorted(gain_dict.items(), key=lambda x: x[1], reverse=True)
     return sorted_dict
 

@@ -10,7 +10,7 @@
 import pickle
 import pandas as pd
 import baostock as bs
-from baostock_structure import STOCK_DICT
+from baostock_structure import STOCK_BASIC
 import talib as ta
 from datetime import datetime, timedelta
 import utils as u
@@ -33,11 +33,12 @@ class Stock():
         # can accept empty data, if so, just code is initiated
         if not data.empty:
             self.kdata_all = data
-            # TODO: self.name = data.loc[1, STOCK_DICT.code_name.name]
-            # TODO: self.ipodate = data.loc[1, STOCK_DICT.ipoDate.name]
-            self.name = data.loc[1, 'code_nam']
-            self.ipodate = data.loc[1, 'ipodate']
-    
+            self.name = data.loc[1, STOCK_BASIC.code_name.name]
+            self.ipodate = data.loc[1, STOCK_BASIC.ipoDate.name]
+            #TODO for backtest 
+            #self.name = data.loc[1, 'code_nam']
+            #self.ipodate = data.loc[1, 'ipodate']
+            
     ''' 获取某段时间的k线数据
     input:
         startdate:开始日期。不需要考虑是否是交易日。
@@ -173,7 +174,10 @@ class Stock():
     '''
     def bench_KDJ(self, hisdata):
         df_out = hisdata[['date']]
-        closelist = hisdata['close'] 
+        hisdata['close'] = hisdata['close'].apply(pd.to_numeric, errors='coerce') 
+        hisdata['high'] = hisdata['high'].apply(pd.to_numeric, errors='coerce') 
+        hisdata['low'] = hisdata['low'].apply(pd.to_numeric, errors='coerce') 
+        closelist = hisdata['close']
         highlist = hisdata['high']
         lowlist = hisdata['low']
 
@@ -251,7 +255,7 @@ class Stock():
         如果在指定时间段内无交易日，报异常。
     '''
     def bench_RPS(self, sorted_gain_list):
-        if sorted_gain_list.empty:
+        if not bool(sorted_gain_list):
             raise Exception("Error: no tradeday during this period!")
         total_num = len(sorted_gain_list)
         for i, stock in enumerate(sorted_gain_list):
@@ -265,6 +269,8 @@ class Stock():
     input:
         date:测试日期 
     output:
+        True:表示买入信号成立
+        False:表示买入信号不成立，或者股票上市小于1年，或者股票在所给时间内均停牌。
     description:
         超买超卖指标：同时满足表买入信号
             1.KDJ:J<0且递增 
@@ -276,8 +282,12 @@ class Stock():
     '''
     def strategy_macd_kdj_cci(self, date):
         # if for daily update, use one year data to calculate index
-        # if for backtest, use all available data
-        startdate = (datetime.strptime(date, "%Y-%m-%d") + timedelta(-365)).strftime("%Y-%m-%d")
+        one_year_ago = datetime.strptime(date, "%Y-%m-%d") + timedelta(-365) 
+        ipo_date = datetime.strptime(self.ipodate, "%Y-%m-%d")
+        # skip those on market < 1 year
+        if (one_year_ago <= ipo_date):
+            return False
+        startdate = (one_year_ago).strftime("%Y-%m-%d")
         enddate = date
 
         hisdata = self.basic_period_hisdata(startdate, enddate)

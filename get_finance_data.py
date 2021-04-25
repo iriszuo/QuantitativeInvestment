@@ -5,7 +5,8 @@ import time
 import csv
 import os
 from utils2 import mkdir
-from utils import getRecentTradeday
+from utils import getRecentTradeday, isTradeDay
+from datetime import datetime, timedelta
 
 from settings import STOCK_BASIC,\
         ALL_STOCK,\
@@ -49,9 +50,9 @@ def getStockDataByCodeFromCsvfile(code, stock_type=None):
     """
     if(not stock_type):
         # get stock type by code
-        lg = bs.login()
-        if(lg.error_code != '0'):
-            raise Exception("baostock login failed")
+        ##lg = bs.login()
+        ##if(lg.error_code != '0'):
+        ##    raise Exception("baostock login failed")
         rs_b = bs.query_stock_basic(code=code)
         if(rs_b.error_code != '0'): 
             raise Exception("baostock get stock basic information faild")
@@ -63,11 +64,11 @@ def getStockDataByCodeFromCsvfile(code, stock_type=None):
             raise e
     file_path = ""
     if(stock_type == STOCK_TYPE_SHARE):
-        file_path += STOCK_SHARE_PATH
+        file_path += STOCK_DATA_SHARE_PATH
     elif(stock_type == STOCK_TYPE_INDEX):
-        file_path += STOCK_INDEX_PATH
+        file_path += STOCK_DATA_INDEX_PATH
     elif(stock_type == STOCK_TYPE_OTHER):
-        file_path += STOCK_OTHER_PATH
+        file_path += STOCK_DATA_OTHER_PATH
     else:
         raise Exception("Unknown stock type")
     file_path += "/" + code + ".csv"
@@ -80,9 +81,9 @@ def getStockType(code):
     '2'表示指数
     '3'表示其他
     """
-    lg = bs.login() # 登陆系统
-    if(lg.error_code != '0'):
-        raise Exception("login failed")
+    ##lg = bs.login() # 登陆系统
+    ##if(lg.error_code != '0'):
+    ##    raise Exception("login failed")
     rs_b = bs.query_stock_basic(code=code)
     if(rs_b.error_code != '0'): 
         print(code,'query_stock_basic respond error_code:'+rs_b.error_code)
@@ -109,9 +110,9 @@ def getAllStockCode(day = None):
       Exception("query all stock failed")
     """
     result = []
-    lg = bs.login() # 登陆系统
-    if(lg.error_code != '0'):
-        raise Exception("login failed")
+    ##lg = bs.login() # 登陆系统
+    ##if(lg.error_code != '0'):
+    ##    raise Exception("login failed")
     if(not day):
         day = getRecentTradeday()
     rs = bs.query_all_stock(day=day) # 获取证券信息
@@ -136,8 +137,12 @@ def getAllShareCode(day = None):
     all_stock = getAllStockCode(day)
     all_share = []
     for stock in all_stock:
-        if getStockType(stock) == '1':
-            all_share.append(stock)
+        try:
+            if getStockType(stock) == '1':
+                all_share.append(stock)
+        except Exception as e:
+            print("get stock {} type faild!".format(stock))
+            continue
     return all_share
 
 
@@ -157,9 +162,9 @@ def getStockHistoryKData(code, startDay, endDay = None):
     Raises:
       raise Exception("login failed")
     """
-    lg = bs.login() # 登陆系统
-    if(lg.error_code != '0'):
-        raise Exception("login failed")
+    ##lg = bs.login() # 登陆系统
+    ##if(lg.error_code != '0'):
+    ##    raise Exception("login failed")
 
     if(not endDay):
         endDay = getRecentTradeday()
@@ -188,6 +193,7 @@ def getStockHistoryKData(code, startDay, endDay = None):
             pctChg,\
             isST",
             start_date=startDay,
+            end_date=endDay,
             frequency="d",
             adjustflag="2")
     if(rs_k.error_code != '0'): 
@@ -335,3 +341,42 @@ def updateAllStockData(day = None):
             if(result % 100 == 0):
                 print("Saved",result,"shares")
     return result
+
+
+'''
+获得股票某天的收盘价
+input:
+    stock_code: 股票代码
+    date: 指定的日期，字符串形式
+output:
+    当天的收盘价。如果当天不是交易日或者当天该股票停牌，则返回False
+'''
+def getStockClosePrice(stock_code, date):
+    if not isTradeDay(date):
+        print("current day is not tradeday!")
+        return False
+
+    _, df = getStockHistoryKData(stock_code, date, date)
+    if df.shape[0] == 0:
+        return False  # 停牌
+    
+    price = df.loc[0,'close']
+    return price
+
+'''
+'''
+def getStockPeriodGain(stock_code, begin, end):
+    begindate = getRecentTradeday(begin)
+    enddate = getRecentTradeday(end)
+    assert datetime.strptime(begindate, "%Y-%m-%d") <= datetime.strptime(enddate, "%Y-%m-%d")
+
+    old_price = float(getStockClosePrice(stock_code, begindate))
+    if old_price == False:
+        return False
+
+    current_price = float(getStockClosePrice(stock_code, enddate))
+    if current_price == False:
+        return False
+
+    gains = (current_price - old_price) / old_price
+    return gains

@@ -54,9 +54,9 @@ def isTradeDay(day):
     不是，返回0
     day的格式错误返回-1
     """
-    lg = bs.login() # 登陆系统
-    if(lg.error_code != '0'):
-        raise Exception("login failed")
+    #lg = bs.login() # 登陆系统
+    #if(lg.error_code != '0'):
+    #    raise Exception("login failed")
     trade_dates = bs.query_trade_dates(start_date=day, end_date=day).get_row_data()
     #bs.logout()
     if(len(trade_dates) == 0):
